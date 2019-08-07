@@ -1,4 +1,4 @@
-YugaByte DB is a high-performance distributed transactional database. (More information [here](https://docs.yugabyte.com/latest/introduction/)). This issue outlines design and interfaces for a Rook YugaByte operator for running YugaByte on Kubernetes with Rook as the underlying storage engine.
+YugaByte DB is a high-performance distributed SQL database. (More information [here](https://docs.yugabyte.com/latest/introduction/)). This issue outlines design and interfaces for a Rook YugaByte operator for running YugaByte on Kubernetes with Rook as the underlying storage engine.
 
 **What is use case behind this feature:**
 
@@ -44,11 +44,11 @@ spec:
           port: 9000
         - name: yb-tserver-grpc
           port: 9100          # default value
-        - name: yb-tserver-cassandra
+        - name: ycql
           port: 9042          # default value
-        - name: yb-tserver-redis
+        - name: yedis
           port: 6379          # default value
-        - name: yb-tserver-postgres
+        - name: ysql
           port: 5433          # default value
     # Volume claim template for TServer
     volumeClaimTemplate:
@@ -81,9 +81,9 @@ The acceptable port names & their default values are as follows:
 | yb-master-ui | 7000 |
 | yb-master-grpc | 7100 |
 | yb-tserver-grpc | 9100 |
-| yb-tserver-cassandra | 9042 |
-| yb-tserver-redis | 6379 |
-| yb-tserver-postgres | 5433 |
+| ycql | 9042 |
+| yedis | 6379 |
+| ysql | 5433 |
 
 ### Volume Claim Templates
 Specify a `PersistentVolumeClaim` template under the `volumeClaimTemplate` field for `master` & `tserver` each. This is a **required** field.
