@@ -39,6 +39,7 @@ const (
 	CockroachDBTestSuite = "cockroachdb"
 	EdgeFSTestSuite      = "edgefs"
 	NFSTestSuite         = "nfs"
+	YugabyteDBTestSuite  = "yugabytedb"
 )
 
 var (
@@ -61,6 +62,8 @@ type TestSuite interface {
 
 func SkipTestSuite(name string) bool {
 	testsToRun := os.Getenv("STORAGE_PROVIDER_TESTS")
+
+	logger.Infof("Tests to run: %s", testsToRun)
 	// jenkins passes "null" if the env var is not set.
 	if testsToRun == "" || testsToRun == "null" {
 		// run all test suites
