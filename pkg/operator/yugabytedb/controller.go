@@ -96,6 +96,7 @@ var ClusterResource = opkit.CustomResource{
 type ClusterController struct {
 	context                 *clusterd.Context
 	containerImage          string
+	// TODO: Remove createInitRetryInterval if not used
 	createInitRetryInterval time.Duration
 }
 
@@ -103,6 +104,7 @@ func NewClusterController(context *clusterd.Context, containerImage string) *Clu
 	return &ClusterController{
 		context:                 context,
 		containerImage:          containerImage,
+		// TODO: Remove createInitRetryInterval if not used
 		createInitRetryInterval: createInitRetryIntervalDefault,
 	}
 }
@@ -159,6 +161,7 @@ func (c *ClusterController) StartWatch(namespace string, stopCh chan struct{}) e
 }
 
 func (c *ClusterController) onAdd(obj interface{}) {
+	// TODO Cleanup resources if something fails in between.
 	clusterObj := obj.(*yugabytedbv1alpha1.Cluster).DeepCopy()
 	logger.Infof("new cluster %s added to namespace %s", clusterObj.Name, clusterObj.Namespace)
 
