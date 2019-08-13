@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Rook Authors. All rights reserved.
+Copyright 2019 The Rook Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -127,67 +127,63 @@ func (_ *YugabyteDBManifests) GetYugabyteDBCRDSpecs() string {
 	return `apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: clusters.yugabytedb.rook.io
+  name: yugabytedbclusters.yugabytedb.rook.io
 spec:
   group: yugabytedb.rook.io
   names:
-    kind: Cluster
-    listKind: ClusterList
-    singular: cluster
-    plural: clusters
+    kind: YugabyteDBCluster
+    listKind: YugabyteDBClusterList
+    singular: yugabytedbcluster
+    plural: yugabytedbclusters
   scope: Namespaced
   version: v1alpha1`
 }
 
 func (_ *YugabyteDBManifests) GetYugabyteDBClusterSpecs(namespace string, replicaCount int) string {
 	return `apiVersion: yugabytedb.rook.io/v1alpha1
-kind: Cluster
+kind: YugabyteDBCluster
 metadata:
   name: rook-yugabytedb
   namespace: ` + namespace + `
 spec:
-  # Mentioning network ports is optional. If some or all ports are not specified, then they will be defaulted to below mentioned values, except for tserver-ui.
-  # For tserver-ui a cluster ip service will be created if the yb-tserver-ui port is explicitly mentioned. If it is not specified, only StatefulSet & headless service will be created for TServer.
-  # TServer ClusterIP service creation will be skipped. Whereas for Master, all 3 kubernetes objects will always be created.
-  network:
-    ports:
-      - name: yb-master-ui
-        port: 7000          # default value
-      - name: yb-master-grpc
-        port: 7100          # default value
-      - name: yb-tserver-ui
-        port: 9001          # default value
-      - name: yb-tserver-grpc
-        port: 9100          # default value
-      - name: yb-tserver-cassandra
-        port: 9042          # default value
-      - name: yb-tserver-redis
-        port: 6379          # default value
-      - name: yb-tserver-postgres
-        port: 5433          # default value
-  # Replica count for master & tserver
-  replicas:
-    master: ` + strconv.Itoa(replicaCount) + `
-    tserver: ` + strconv.Itoa(replicaCount) + `
-  scope:
-    master:
-      volumeClaimTemplates:
-      - metadata:
-          name: datadir
-        spec:
-          accessModes: [ "ReadWriteOnce" ]
-          resources:
-            requests:
-              storage: 10Mi
-          storageClassName: standard
-    tserver:
-      volumeClaimTemplates:
-      - metadata:
-          name: datadir
-        spec:
-          accessModes: [ "ReadWriteOnce" ]
-          resources:
-            requests:
-              storage: 10Mi
-          storageClassName: standard`
+  master:
+    replicas: ` + strconv.Itoa(replicaCount) + `
+    network:
+      ports:
+        - name: yb-master-ui
+          port: 7000
+        - name: yb-master-rpc
+          port: 7100
+    volumeClaimTemplate:
+      metadata:
+        name: datadir
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 10Mi
+        storageClassName: standard
+  tserver:
+    replicas: ` + strconv.Itoa(replicaCount) + `
+    network:
+      ports:
+        - name: yb-tserver-ui
+          port: 9000
+        - name: yb-tserver-rpc
+          port: 9100
+        - name: ycql
+          port: 9042
+        - name: yedis
+          port: 6379
+        - name: ysql
+          port: 5433
+    volumeClaimTemplate:
+      metadata:
+        name: datadir
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 10Mi
+        storageClassName: standard`
 }

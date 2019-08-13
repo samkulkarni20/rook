@@ -18,10 +18,10 @@ limitations under the License.
 
 package v1alpha1
 
-// ClusterListerExpansion allows custom methods to be added to
-// ClusterLister.
-type ClusterListerExpansion interface{}
+// YugabyteDBClusterListerExpansion allows custom methods to be added to
+// YugabyteDBClusterLister.
+type YugabyteDBClusterListerExpansion interface{}
 
-// ClusterNamespaceListerExpansion allows custom methods to be added to
-// ClusterNamespaceLister.
-type ClusterNamespaceListerExpansion interface{}
+// YugabyteDBClusterNamespaceListerExpansion allows custom methods to be added to
+// YugabyteDBClusterNamespaceLister.
+type YugabyteDBClusterNamespaceListerExpansion interface{}

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Rook Authors. All rights reserved.
+Copyright 2019 The Rook Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -12,16 +12,13 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
 */
 
-// Package yugabytedb to manage a yugabytedb cluster.
 package yugabytedb
 
 import (
 	"fmt"
 	"reflect"
-	"time"
 
 	opkit "github.com/rook/operator-kit"
 	rookv1alpha2 "github.com/rook/rook/pkg/apis/rook.io/v1alpha2"
@@ -39,49 +36,45 @@ import (
 )
 
 const (
-	CustomResourceName                = "cluster"
-	CustomResourceNamePlural          = "clusters"
-	MasterName                        = "yb-master"
-	MasterNamePlural                  = "yb-masters"
-	TServerName                       = "yb-tserver"
-	TServerNamePlural                 = "yb-tservers"
-	MasterUIServiceName               = "yb-master-ui"
-	TServerUIServiceName              = "yb-tserver-ui"
-	createInitRetryIntervalDefault    = 6 * time.Second
-	MasterUIPortDefault               = int32(7000)
-	MasterUIPortName                  = "yb-master-ui"
-	MasterRPCPortDefault              = int32(7100)
-	MasterRPCPortName                 = "yb-master-grpc"
-	TServerUIPortDefault              = int32(9000)
-	TServerUIPortName                 = "yb-tserver-ui"
-	TServerRPCPortDefault             = int32(9100)
-	TServerRPCPortName                = "yb-tserver-grpc"
-	TServerCassandraPortDefault       = int32(9042)
-	TServerCassandraPortName          = "yb-tserver-cassandra"
-	TServerRedisPortDefault           = int32(6379)
-	TServerRedisPortName              = "yb-tserver-redis"
-	TServerPostgresPortDefault        = int32(5433)
-	TServerPostgresPortName           = "yb-tserver-postgres"
-	MasterContainerUIPortName         = "master-ui"
-	MasterContainerRPCPortName        = "master-rpc"
-	TServerContainerUIPortName        = "tserver-ui"
-	TServerContainerRPCPortName       = "tserver-rpc"
-	TServerContainerCassandraPortName = "cassandra"
-	TServerContainerRedisPortName     = "redis"
-	TServerContainerPostgresPortName  = "postgres"
-	UIPortName                        = "ui"
-	RPCPortName                       = "rpc-port"
-	CassandraPortName                 = "cassandra"
-	RedisPortName                     = "redis"
-	PostgresPortName                  = "postgres"
-	VolumeDataName                    = "datadir"
-	VolumeMountPath                   = "/mnt/data0"
-	envGetHostsFrom                   = "GET_HOSTS_FROM"
-	envGetHostsFromVal                = "dns"
-	envPodIP                          = "POD_IP"
-	envPodIPVal                       = "status.podIP"
-	envPodName                        = "POD_NAME"
-	envPodNameVal                     = "metadata.name"
+	CustomResourceName          = "yugabytedbcluster"
+	CustomResourceNamePlural    = "yugabytedbclusters"
+	MasterName                  = "yb-master"
+	MasterNamePlural            = "yb-masters"
+	TServerName                 = "yb-tserver"
+	TServerNamePlural           = "yb-tservers"
+	MasterUIServiceName         = "yb-master-ui"
+	TServerUIServiceName        = "yb-tserver-ui"
+	MasterUIPortDefault         = int32(7000)
+	MasterUIPortName            = "yb-master-ui"
+	MasterRPCPortDefault        = int32(7100)
+	MasterRPCPortName           = "yb-master-rpc"
+	TServerUIPortDefault        = int32(9000)
+	TServerUIPortName           = "yb-tserver-ui"
+	TServerRPCPortDefault       = int32(9100)
+	TServerRPCPortName          = "yb-tserver-rpc"
+	TServerCassandraPortDefault = int32(9042)
+	TServerCassandraPortName    = "ycql"
+	TServerRedisPortDefault     = int32(6379)
+	TServerRedisPortName        = "yedis"
+	TServerPostgresPortDefault  = int32(5433)
+	TServerPostgresPortName     = "ysql"
+	MasterContainerUIPortName   = "master-ui"
+	MasterContainerRPCPortName  = "master-rpc"
+	TServerContainerUIPortName  = "tserver-ui"
+	TServerContainerRPCPortName = "tserver-rpc"
+	UIPortName                  = "ui"
+	RPCPortName                 = "rpc-port"
+	CassandraPortName           = "cassandra"
+	RedisPortName               = "redis"
+	PostgresPortName            = "postgres"
+	VolumeMountPath             = "/mnt/data0"
+	envGetHostsFrom             = "GET_HOSTS_FROM"
+	envGetHostsFromVal          = "dns"
+	envPodIP                    = "POD_IP"
+	envPodIPVal                 = "status.podIP"
+	envPodName                  = "POD_NAME"
+	envPodNameVal               = "metadata.name"
+	YugabyteDBImageName         = "yugabytedb/yugabyte:latest"
 )
 
 var ClusterResource = opkit.CustomResource{
@@ -90,29 +83,26 @@ var ClusterResource = opkit.CustomResource{
 	Group:   yugabytedbv1alpha1.CustomResourceGroup,
 	Version: yugabytedbv1alpha1.Version,
 	Scope:   apiextensionsv1beta1.NamespaceScoped,
-	Kind:    reflect.TypeOf(yugabytedbv1alpha1.Cluster{}).Name(),
+	Kind:    reflect.TypeOf(yugabytedbv1alpha1.YugabyteDBCluster{}).Name(),
 }
 
 type ClusterController struct {
-	context                 *clusterd.Context
-	containerImage          string
-	// TODO: Remove createInitRetryInterval if not used
-	createInitRetryInterval time.Duration
+	context        *clusterd.Context
+	containerImage string
 }
 
 func NewClusterController(context *clusterd.Context, containerImage string) *ClusterController {
 	return &ClusterController{
-		context:                 context,
-		containerImage:          containerImage,
-		// TODO: Remove createInitRetryInterval if not used
-		createInitRetryInterval: createInitRetryIntervalDefault,
+		context:        context,
+		containerImage: containerImage,
 	}
 }
 
 type cluster struct {
 	context     *clusterd.Context
+	name        string
 	namespace   string
-	spec        yugabytedbv1alpha1.ClusterSpec
+	spec        yugabytedbv1alpha1.YugabyteDBClusterSpec
 	annotations rookv1alpha2.Annotations
 	ownerRef    metav1.OwnerReference
 }
@@ -125,9 +115,10 @@ type serverPorts struct {
 	ui, rpc, cassandra, redis, postgres int32
 }
 
-func newCluster(c *yugabytedbv1alpha1.Cluster, context *clusterd.Context) *cluster {
+func newCluster(c *yugabytedbv1alpha1.YugabyteDBCluster, context *clusterd.Context) *cluster {
 	return &cluster{
 		context:     context,
+		name:        c.Name,
 		namespace:   c.Namespace,
 		spec:        c.Spec,
 		annotations: c.Spec.Annotations,
@@ -155,14 +146,14 @@ func (c *ClusterController) StartWatch(namespace string, stopCh chan struct{}) e
 
 	logger.Infof("start watching yugabytedb clusters in all namespaces")
 	watcher := opkit.NewWatcher(ClusterResource, namespace, resourceHandlerFuncs, c.context.RookClientset.YugabytedbV1alpha1().RESTClient())
-	go watcher.Watch(&yugabytedbv1alpha1.Cluster{}, stopCh)
+	go watcher.Watch(&yugabytedbv1alpha1.YugabyteDBCluster{}, stopCh)
 
 	return nil
 }
 
 func (c *ClusterController) onAdd(obj interface{}) {
 	// TODO Cleanup resources if something fails in between.
-	clusterObj := obj.(*yugabytedbv1alpha1.Cluster).DeepCopy()
+	clusterObj := obj.(*yugabytedbv1alpha1.YugabyteDBCluster).DeepCopy()
 	logger.Infof("new cluster %s added to namespace %s", clusterObj.Name, clusterObj.Namespace)
 
 	cluster := newCluster(clusterObj, c.context)
@@ -206,8 +197,8 @@ func (c *ClusterController) onAdd(obj interface{}) {
 }
 
 func (c *ClusterController) onUpdate(oldObj, newObj interface{}) {
-	_ = oldObj.(*yugabytedbv1alpha1.Cluster).DeepCopy()
-	newObjCluster := newObj.(*yugabytedbv1alpha1.Cluster).DeepCopy()
+	_ = oldObj.(*yugabytedbv1alpha1.YugabyteDBCluster).DeepCopy()
+	newObjCluster := newObj.(*yugabytedbv1alpha1.YugabyteDBCluster).DeepCopy()
 	newYBCluster := newCluster(newObjCluster, c.context)
 
 	// Validate new spec
@@ -253,7 +244,7 @@ func (c *ClusterController) onUpdate(oldObj, newObj interface{}) {
 }
 
 func (c *ClusterController) onDelete(obj interface{}) {
-	cluster, ok := obj.(*yugabytedbv1alpha1.Cluster)
+	cluster, ok := obj.(*yugabytedbv1alpha1.YugabyteDBCluster)
 	if !ok {
 		return
 	}
@@ -271,7 +262,7 @@ func (c *ClusterController) createTServerUIService(cluster *cluster) error {
 }
 
 func (c *ClusterController) createUIService(cluster *cluster, isTServerService bool) error {
-	ports, err := getPortsFromSpec(cluster.spec.Network)
+	ports, err := getPortsFromSpec(cluster.spec.Master.Network)
 	if err != nil {
 		return err
 	}
@@ -280,6 +271,10 @@ func (c *ClusterController) createUIService(cluster *cluster, isTServerService b
 	label := MasterName
 
 	if isTServerService {
+		ports, err = getPortsFromSpec(cluster.spec.TServer.Network)
+		if err != nil {
+			return err
+		}
 		// If user hasn't specified TServer UI port, do not create a UI service for it.
 		if ports.tserverPorts.ui <= 0 {
 			return nil
@@ -288,6 +283,10 @@ func (c *ClusterController) createUIService(cluster *cluster, isTServerService b
 		serviceName = TServerUIServiceName
 		label = TServerName
 	}
+
+	// Append CR name suffix to make the service name & label unique in current namespace.
+	serviceName = cluster.addCRNameSuffix(serviceName)
+	label = cluster.addCRNameSuffix(label)
 
 	// This service is meant to be used by clients of the database. It exposes a ClusterIP that will
 	// automatically load balance connections to the different database pods.
@@ -327,7 +326,7 @@ func (c *ClusterController) updateTServerUIService(newCluster *cluster) error {
 }
 
 func (c *ClusterController) updateUIService(newCluster *cluster, isTServerService bool) error {
-	ports, err := getPortsFromSpec(newCluster.spec.Network)
+	ports, err := getPortsFromSpec(newCluster.spec.Master.Network)
 	if err != nil {
 		return err
 	}
@@ -335,8 +334,15 @@ func (c *ClusterController) updateUIService(newCluster *cluster, isTServerServic
 	serviceName := MasterUIServiceName
 
 	if isTServerService {
+		ports, err = getPortsFromSpec(newCluster.spec.TServer.Network)
+		if err != nil {
+			return err
+		}
+
 		serviceName = TServerUIServiceName
 	}
+
+	serviceName = newCluster.addCRNameSuffix(serviceName)
 
 	service, err := c.context.Clientset.CoreV1().Services(newCluster.namespace).Get(serviceName, metav1.GetOptions{})
 
@@ -388,12 +394,6 @@ func (c *ClusterController) createTServerHeadlessService(cluster *cluster) error
 }
 
 func (c *ClusterController) createHeadlessService(cluster *cluster, isTServerService bool) error {
-	ports, err := getPortsFromSpec(cluster.spec.Network)
-
-	if err != nil {
-		return err
-	}
-
 	serviceName := MasterNamePlural
 	label := MasterName
 
@@ -401,6 +401,10 @@ func (c *ClusterController) createHeadlessService(cluster *cluster, isTServerSer
 		serviceName = TServerNamePlural
 		label = TServerName
 	}
+
+	// Append CR name suffix to make the service name & label unique in current namespace.
+	serviceName = cluster.addCRNameSuffix(serviceName)
+	label = cluster.addCRNameSuffix(label)
 
 	// This service only exists to create DNS entries for each pod in the stateful
 	// set such that they can resolve each other's IP addresses. It does not
@@ -418,7 +422,7 @@ func (c *ClusterController) createHeadlessService(cluster *cluster, isTServerSer
 			// the sake of the other YugabyteDB pods even before they're ready, since they
 			// have to be able to talk to each other in order to become ready.
 			ClusterIP: "None",
-			Ports:     createServicePorts(ports, isTServerService),
+			Ports:     createServicePorts(cluster, isTServerService),
 		},
 	}
 
@@ -445,17 +449,13 @@ func (c *ClusterController) updateTServerHeadlessService(newCluster *cluster) er
 }
 
 func (c *ClusterController) updateHeadlessService(newCluster *cluster, isTServerService bool) error {
-	ports, err := getPortsFromSpec(newCluster.spec.Network)
-
-	if err != nil {
-		return err
-	}
-
 	serviceName := MasterNamePlural
 
 	if isTServerService {
 		serviceName = TServerNamePlural
 	}
+
+	serviceName = newCluster.addCRNameSuffix(serviceName)
 
 	service, err := c.context.Clientset.CoreV1().Services(newCluster.namespace).Get(serviceName, metav1.GetOptions{})
 
@@ -463,7 +463,7 @@ func (c *ClusterController) updateHeadlessService(newCluster *cluster, isTServer
 		return err
 	}
 
-	service.Spec.Ports = createServicePorts(ports, isTServerService)
+	service.Spec.Ports = createServicePorts(newCluster, isTServerService)
 
 	if _, err := c.context.Clientset.CoreV1().Services(newCluster.namespace).Update(service); err != nil {
 		return err
@@ -483,47 +483,54 @@ func (c *ClusterController) createTServerStatefulset(cluster *cluster) error {
 }
 
 func (c *ClusterController) createStatefulSet(cluster *cluster, isTServerStatefulset bool) error {
-	replicas := int32(cluster.spec.Replicas.Master)
-	appName := MasterName
-	appNamePlural := MasterNamePlural
-	volumeClaimTemplate := cluster.spec.Storage.Master.VolumeClaimTemplates
+	replicas := int32(cluster.spec.Master.Replicas)
+	name := MasterName
+	label := MasterName
+	serviceName := MasterNamePlural
+	volumeClaimTemplates := []v1.PersistentVolumeClaim{
+		cluster.spec.Master.VolumeClaimTemplate,
+	}
 
 	if isTServerStatefulset {
-		replicas = int32(cluster.spec.Replicas.TServer)
-		appName = TServerName
-		appNamePlural = TServerNamePlural
-		volumeClaimTemplate = cluster.spec.Storage.TServer.VolumeClaimTemplates
+		replicas = int32(cluster.spec.TServer.Replicas)
+		name = TServerName
+		label = TServerName
+		serviceName = TServerNamePlural
+		volumeClaimTemplates = []v1.PersistentVolumeClaim{
+			cluster.spec.TServer.VolumeClaimTemplate,
+		}
 	}
 
-	ports, err := getPortsFromSpec(cluster.spec.Network)
-	if err != nil {
-		return err
-	}
+	// Append CR name suffix to make the service name & label unique in current namespace.
+	name = cluster.addCRNameSuffix(name)
+	label = cluster.addCRNameSuffix(label)
+	serviceName = cluster.addCRNameSuffix(serviceName)
+	volumeClaimTemplates[0].Name = cluster.addCRNameSuffix(volumeClaimTemplates[0].Name)
 
 	statefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      appName,
+			Name:      name,
 			Namespace: cluster.namespace,
-			Labels:    createAppLabels(appName),
+			Labels:    createAppLabels(label),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName:         appNamePlural,
+			ServiceName:         serviceName,
 			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Replicas:            &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: createAppLabels(appName),
+				MatchLabels: createAppLabels(label),
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: cluster.namespace,
-					Labels:    createAppLabels(appName),
+					Labels:    createAppLabels(label),
 				},
-				Spec: createPodSpec(cluster, c.containerImage, ports, isTServerStatefulset, appName),
+				Spec: createPodSpec(cluster, c.containerImage, isTServerStatefulset, name, serviceName),
 			},
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
 			},
-			VolumeClaimTemplates: volumeClaimTemplate,
+			VolumeClaimTemplates: volumeClaimTemplates,
 		},
 	}
 	cluster.annotations.ApplyToObjectMeta(&statefulSet.Spec.Template.ObjectMeta)
@@ -551,23 +558,38 @@ func (c *ClusterController) updateTServerStatefulset(newCluster *cluster) error 
 }
 
 func (c *ClusterController) updateStatefulSet(newCluster *cluster, isTServerStatefulset bool) error {
-	ports, err := getPortsFromSpec(newCluster.spec.Network)
+	ports, err := getPortsFromSpec(newCluster.spec.Master.Network)
 
 	if err != nil {
 		return err
 	}
 
-	replicas := int32(newCluster.spec.Replicas.Master)
-	sfsName := MasterName
-	volumeClaimTemplate := newCluster.spec.Storage.Master.VolumeClaimTemplates
-	command := createMasterContainerCommand(ports.masterPorts.rpc, newCluster.spec.Replicas.Master)
+	replicas := int32(newCluster.spec.Master.Replicas)
+	sfsName := newCluster.addCRNameSuffix(MasterName)
+	masterServiceName := newCluster.addCRNameSuffix(MasterNamePlural)
+	vct := *newCluster.spec.Master.VolumeClaimTemplate.DeepCopy()
+	vct.Name = newCluster.addCRNameSuffix(vct.Name)
+	volumeClaimTemplates := []v1.PersistentVolumeClaim{vct}
+	command := createMasterContainerCommand(newCluster.namespace, masterServiceName, ports.masterPorts.rpc, newCluster.spec.Master.Replicas)
 	containerPorts := createMasterContainerPortsList(ports)
 
 	if isTServerStatefulset {
-		replicas = int32(newCluster.spec.Replicas.TServer)
-		sfsName = TServerName
-		volumeClaimTemplate = newCluster.spec.Storage.TServer.VolumeClaimTemplates
-		command = createTServerContainerCommand(ports.masterPorts.rpc, ports.tserverPorts.rpc, ports.tserverPorts.postgres, newCluster.spec.Replicas.TServer)
+		masterRPCPort := ports.masterPorts.rpc
+		ports, err := getPortsFromSpec(newCluster.spec.TServer.Network)
+
+		if err != nil {
+			return err
+		}
+
+		replicas = int32(newCluster.spec.TServer.Replicas)
+		sfsName = newCluster.addCRNameSuffix(TServerName)
+		masterServiceName = newCluster.addCRNameSuffix(MasterNamePlural)
+		tserverServiceName := newCluster.addCRNameSuffix(TServerNamePlural)
+		vct = *newCluster.spec.TServer.VolumeClaimTemplate.DeepCopy()
+		vct.Name = newCluster.addCRNameSuffix(vct.Name)
+		volumeClaimTemplates = []v1.PersistentVolumeClaim{vct}
+		command = createTServerContainerCommand(newCluster.namespace, tserverServiceName, masterServiceName,
+			masterRPCPort, ports.tserverPorts.rpc, ports.tserverPorts.postgres, newCluster.spec.TServer.Replicas)
 		containerPorts = createTServerContainerPortsList(ports)
 	}
 
@@ -580,7 +602,8 @@ func (c *ClusterController) updateStatefulSet(newCluster *cluster, isTServerStat
 	sfs.Spec.Replicas = &replicas
 	sfs.Spec.Template.Spec.Containers[0].Command = command
 	sfs.Spec.Template.Spec.Containers[0].Ports = containerPorts
-	sfs.Spec.VolumeClaimTemplates = volumeClaimTemplate
+	sfs.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name = vct.Name
+	sfs.Spec.VolumeClaimTemplates = volumeClaimTemplates
 
 	if _, err := c.context.Clientset.AppsV1().StatefulSets(newCluster.namespace).Update(sfs); err != nil {
 		return err
@@ -591,7 +614,7 @@ func (c *ClusterController) updateStatefulSet(newCluster *cluster, isTServerStat
 	return nil
 }
 
-func createPodSpec(cluster *cluster, containerImage string, ports *clusterPorts, isTServerStatefulset bool, appName string) v1.PodSpec {
+func createPodSpec(cluster *cluster, containerImage string, isTServerStatefulset bool, name, serviceName string) v1.PodSpec {
 	return v1.PodSpec{
 		Affinity: &v1.Affinity{
 			PodAntiAffinity: &v1.PodAntiAffinity{
@@ -604,7 +627,7 @@ func createPodSpec(cluster *cluster, containerImage string, ports *clusterPorts,
 									{
 										Key:      k8sutil.AppAttr,
 										Operator: metav1.LabelSelectorOpIn,
-										Values:   []string{appName},
+										Values:   []string{name},
 									},
 								},
 							},
@@ -614,22 +637,28 @@ func createPodSpec(cluster *cluster, containerImage string, ports *clusterPorts,
 				},
 			},
 		},
-		Containers: []v1.Container{createContainer(cluster, containerImage, ports, isTServerStatefulset, appName)},
+		Containers: []v1.Container{createContainer(cluster, containerImage, isTServerStatefulset, name, serviceName)},
 	}
 }
 
-func createContainer(cluster *cluster, containerImage string, ports *clusterPorts, isTServerStatefulset bool, appName string) v1.Container {
-	command := createMasterContainerCommand(ports.masterPorts.rpc, cluster.spec.Replicas.Master)
+func createContainer(cluster *cluster, containerImage string, isTServerStatefulset bool, name, serviceName string) v1.Container {
+	ports, _ := getPortsFromSpec(cluster.spec.Master.Network)
+	command := createMasterContainerCommand(cluster.namespace, serviceName, ports.masterPorts.rpc, cluster.spec.Master.Replicas)
 	containerPorts := createMasterContainerPortsList(ports)
+	volumeMountName := cluster.addCRNameSuffix(cluster.spec.Master.VolumeClaimTemplate.Name)
 
 	if isTServerStatefulset {
-		command = createTServerContainerCommand(ports.masterPorts.rpc, ports.tserverPorts.rpc, ports.tserverPorts.postgres, cluster.spec.Replicas.TServer)
+		masterServiceName := cluster.addCRNameSuffix(MasterNamePlural)
+		masterRPCPort := ports.masterPorts.rpc
+		ports, _ = getPortsFromSpec(cluster.spec.TServer.Network)
+		command = createTServerContainerCommand(cluster.namespace, serviceName, masterServiceName, masterRPCPort, ports.tserverPorts.rpc, ports.tserverPorts.postgres, cluster.spec.TServer.Replicas)
 		containerPorts = createTServerContainerPortsList(ports)
+		volumeMountName = cluster.addCRNameSuffix(cluster.spec.TServer.VolumeClaimTemplate.Name)
 	}
 
 	return v1.Container{
-		Name:            appName,
-		Image:           "yugabytedb/yugabyte:latest",
+		Name:            name,
+		Image:           YugabyteDBImageName,
 		ImagePullPolicy: v1.PullAlways,
 		Env: []v1.EnvVar{
 			{
@@ -657,41 +686,37 @@ func createContainer(cluster *cluster, containerImage string, ports *clusterPort
 		Ports:   containerPorts,
 		VolumeMounts: []v1.VolumeMount{
 			{
-				Name:      VolumeDataName,
+				Name:      volumeMountName,
 				MountPath: VolumeMountPath,
 			},
 		},
 	}
 }
 
-func validateClusterSpec(spec yugabytedbv1alpha1.ClusterSpec) error {
+func validateClusterSpec(spec yugabytedbv1alpha1.YugabyteDBClusterSpec) error {
 
-	if spec.Replicas.Master < 1 {
-		return fmt.Errorf("invalid Master replica count: %d. Must be at least 1", spec.Replicas.Master)
+	if spec.Master.Replicas < 1 {
+		return fmt.Errorf("invalid Master replica count: %d. Must be at least 1", spec.Master.Replicas)
 	}
 
-	if spec.Replicas.TServer < 1 {
-		return fmt.Errorf("invalid TServer replica count: %d. Must be at least 1", spec.Replicas.TServer)
+	if spec.TServer.Replicas < 1 {
+		return fmt.Errorf("invalid TServer replica count: %d. Must be at least 1", spec.TServer.Replicas)
 	}
 
-	if _, err := getPortsFromSpec(spec.Network); err != nil {
+	if _, err := getPortsFromSpec(spec.Master.Network); err != nil {
 		return err
 	}
 
-	if &spec.Storage.Master == nil {
-		return fmt.Errorf("Master storage spec not found.")
+	if _, err := getPortsFromSpec(spec.TServer.Network); err != nil {
+		return err
 	}
 
-	if &spec.Storage.Master.VolumeClaimTemplates == nil {
-		return fmt.Errorf("VolumeClaimTemplate unavailable in Master storage spec.")
+	if &spec.Master.VolumeClaimTemplate == nil {
+		return fmt.Errorf("VolumeClaimTemplate unavailable in Master spec.")
 	}
 
-	if &spec.Storage.TServer == nil {
-		return fmt.Errorf("TServer storage spec not found.")
-	}
-
-	if &spec.Storage.TServer.VolumeClaimTemplates == nil {
-		return fmt.Errorf("VolumeClaimTemplate unavailable in TServer storage spec.")
+	if &spec.TServer.VolumeClaimTemplate == nil {
+		return fmt.Errorf("VolumeClaimTemplate unavailable in TServer spec.")
 	}
 
 	return nil
@@ -703,10 +728,12 @@ func createAppLabels(label string) map[string]string {
 	}
 }
 
-func createServicePorts(ports *clusterPorts, isTServerService bool) []v1.ServicePort {
+func createServicePorts(cluster *cluster, isTServerService bool) []v1.ServicePort {
 	var servicePorts []v1.ServicePort
 
 	if !isTServerService {
+		ports, _ := getPortsFromSpec(cluster.spec.Master.Network)
+
 		servicePorts = []v1.ServicePort{
 			{
 				Name:       UIPortName,
@@ -720,6 +747,8 @@ func createServicePorts(ports *clusterPorts, isTServerService bool) []v1.Service
 			},
 		}
 	} else {
+		ports, _ := getPortsFromSpec(cluster.spec.TServer.Network)
+
 		tserverUIPort := ports.tserverPorts.ui
 
 		if tserverUIPort <= 0 {
@@ -839,30 +868,31 @@ func getPortsFromSpec(networkSpec rookv1alpha2.NetworkSpec) (clusterPort *cluste
 	return &ports, nil
 }
 
-func createMasterContainerCommand(grpcPort, replicas int32) []string {
+func createMasterContainerCommand(namespace, serviceName string, grpcPort, replicas int32) []string {
 	command := []string{
 		"/home/yugabyte/bin/yb-master",
-		"--fs_data_dirs=/mnt/data0",
+		fmt.Sprintf("--fs_data_dirs=%s", VolumeMountPath),
 		fmt.Sprintf("--rpc_bind_addresses=$(POD_IP):%d", grpcPort),
-		fmt.Sprintf("--server_broadcast_addresses=$(POD_NAME).yb-masters:%d", grpcPort),
+		fmt.Sprintf("--server_broadcast_addresses=$(POD_NAME).%s:%d", serviceName, grpcPort),
 		"--use_private_ip=never",
-		fmt.Sprintf("--master_addresses=yb-masters.default.svc.cluster.local:%d", grpcPort),
+		fmt.Sprintf("--master_addresses=%s.%s.svc.cluster.local:%d", serviceName, namespace, grpcPort),
+		"--use_initial_sys_catalog_snapshot=true",
 		fmt.Sprintf("--master_replication_factor=%d", replicas),
 		"--logtostderr",
 	}
 	return command
 }
 
-func createTServerContainerCommand(masterGRPCPort, tserverGRPCPort, pgsqlPort, replicas int32) []string {
+func createTServerContainerCommand(namespace, serviceName, masterServiceName string, masterGRPCPort, tserverGRPCPort, pgsqlPort, replicas int32) []string {
 	command := []string{
 		"/home/yugabyte/bin/yb-tserver",
-		"--fs_data_dirs=/mnt/data0",
+		fmt.Sprintf("--fs_data_dirs=%s", VolumeMountPath),
 		fmt.Sprintf("--rpc_bind_addresses=$(POD_IP):%d", tserverGRPCPort),
-		fmt.Sprintf("--server_broadcast_addresses=$(POD_NAME).yb-tservers:%d", tserverGRPCPort),
+		fmt.Sprintf("--server_broadcast_addresses=$(POD_NAME).%s:%d", serviceName, tserverGRPCPort),
 		"--start_pgsql_proxy",
 		fmt.Sprintf("--pgsql_proxy_bind_address=$(POD_IP):%d", pgsqlPort),
 		"--use_private_ip=never",
-		fmt.Sprintf("--tserver_master_addrs=yb-masters.default.svc.cluster.local:%d", masterGRPCPort),
+		fmt.Sprintf("--tserver_master_addrs=%s.%s.svc.cluster.local:%d", masterServiceName, namespace, masterGRPCPort),
 		fmt.Sprintf("--tserver_master_replication_factor=%d", replicas),
 		"--logtostderr",
 	}
@@ -901,18 +931,22 @@ func createTServerContainerPortsList(clusterPortsSpec *clusterPorts) []v1.Contai
 			ContainerPort: int32(clusterPortsSpec.tserverPorts.rpc),
 		},
 		{
-			Name:          TServerContainerCassandraPortName,
+			Name:          CassandraPortName,
 			ContainerPort: int32(clusterPortsSpec.tserverPorts.cassandra),
 		},
 		{
-			Name:          TServerContainerRedisPortName,
+			Name:          RedisPortName,
 			ContainerPort: int32(clusterPortsSpec.tserverPorts.redis),
 		},
 		{
-			Name:          TServerContainerPostgresPortName,
+			Name:          PostgresPortName,
 			ContainerPort: int32(clusterPortsSpec.tserverPorts.postgres),
 		},
 	}
 
 	return ports
+}
+
+func (c *cluster) addCRNameSuffix(str string) string {
+	return fmt.Sprintf("%s-%s", str, c.name)
 }

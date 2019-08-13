@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Rook Authors. All rights reserved.
+Copyright 2019 The Rook Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	CRDFullyQualifiedName         = "clusters.yugabytedb.rook.io"
-	CRDFullyQualifiedNameSingular = "cluster.yugabytedb.rook.io"
+	CRDFullyQualifiedName         = "yugabytedbclusters.yugabytedb.rook.io"
+	CRDFullyQualifiedNameSingular = "yugabytedbcluster.yugabytedb.rook.io"
 )
 
 type YugabyteDBInstaller struct {
@@ -110,12 +110,12 @@ func (y *YugabyteDBInstaller) CreateYugabyteDBCluster(namespace string, replicaC
 		return err
 	}
 
-	if err := y.k8sHelper.WaitForPodCount("app=yb-master", namespace, replicaCount); err != nil {
+	if err := y.k8sHelper.WaitForPodCount("app=yb-master-rook-yugabytedb", namespace, replicaCount); err != nil {
 		logger.Error("YugabyteDB cluster master pods are not running")
 		return err
 	}
 
-	if err := y.k8sHelper.WaitForPodCount("app=yb-tserver", namespace, replicaCount); err != nil {
+	if err := y.k8sHelper.WaitForPodCount("app=yb-tserver-rook-yugabytedb", namespace, replicaCount); err != nil {
 		logger.Error("YugabyteDB cluster tserver pods are not running")
 		return err
 	}
@@ -130,7 +130,7 @@ func (y *YugabyteDBInstaller) RemoveAllYugabyteDBResources(systemNS, namespace s
 	checkError(y.T(), err, fmt.Sprintf("cannot remove cluster %s", namespace))
 
 	crdCheckerFunc := func() error {
-		_, err := y.k8sHelper.RookClientset.YugabytedbV1alpha1().Clusters(namespace).Get(namespace, metav1.GetOptions{})
+		_, err := y.k8sHelper.RookClientset.YugabytedbV1alpha1().YugabyteDBClusters(namespace).Get(namespace, metav1.GetOptions{})
 		return err
 	}
 	err = y.k8sHelper.WaitForCustomResourceDeletion(namespace, crdCheckerFunc)
@@ -163,11 +163,8 @@ func (y *YugabyteDBInstaller) RemoveAllYugabyteDBResources(systemNS, namespace s
 func (y *YugabyteDBInstaller) GatherAllLogs(systemNS, namespace, testName string) {
 	if !y.T().Failed() && Env.Logs != "all" {
 		return
-	} else if y.T().Failed() {
-		GatherCRDObjectDebuggingInfo(y.k8sHelper, systemNS)
-		GatherCRDObjectDebuggingInfo(y.k8sHelper, namespace)
 	}
 	logger.Infof("Gathering all logs from yugabytedb cluster %s", namespace)
-	y.k8sHelper.GetLogs("rook-yugabytedb-operator", Env.HostType, systemNS, testName)
-	y.k8sHelper.GetLogs("rook-yugabytedb", Env.HostType, namespace, testName)
+	y.k8sHelper.GetLogsFromNamespace(systemNS, testName, Env.HostType)
+	y.k8sHelper.GetLogsFromNamespace(namespace, testName, Env.HostType)
 }

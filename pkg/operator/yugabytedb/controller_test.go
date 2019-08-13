@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Rook Authors. All rights reserved.
+Copyright 2019 The Rook Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	rookalpha "github.com/rook/rook/pkg/apis/rook.io/v1alpha2"
 	yugabytedbv1alpha1 "github.com/rook/rook/pkg/apis/yugabytedb.rook.io/v1alpha1"
@@ -38,21 +37,27 @@ import (
 
 const (
 	CustomPortShift = 100
+	ClusterName     = "ybdb-cluster"
+	VolumeDataName  = "datadir"
 )
 
 func TestValidateClusterSpec(t *testing.T) {
 	// invalid master & tserver replica count
-	spec := yugabytedbv1alpha1.ClusterSpec{
-		Storage: yugabytedbv1alpha1.StorageSpec{},
-		Network: rookalpha.NetworkSpec{
-			Ports: []rookalpha.PortSpec{
-				{Name: MasterUIPortName, Port: 123},
-				{Name: MasterRPCPortName, Port: 456},
+	spec := yugabytedbv1alpha1.YugabyteDBClusterSpec{
+		Master: yugabytedbv1alpha1.ServerSpec{
+			Replicas: 0,
+			Network: rookalpha.NetworkSpec{
+				Ports: []rookalpha.PortSpec{
+					{Name: MasterUIPortName, Port: 123},
+					{Name: MasterRPCPortName, Port: 456},
+				},
 			},
+			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
 		},
-		Replicas: yugabytedbv1alpha1.ReplicaSpec{
-			Master:  0,
-			TServer: 0,
+		TServer: yugabytedbv1alpha1.ServerSpec{
+			Replicas:            0,
+			Network:             rookalpha.NetworkSpec{},
+			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
 		},
 	}
 	err := validateClusterSpec(spec)
@@ -60,17 +65,21 @@ func TestValidateClusterSpec(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "invalid Master replica count"))
 
 	// invalid master replica count
-	spec = yugabytedbv1alpha1.ClusterSpec{
-		Storage: yugabytedbv1alpha1.StorageSpec{},
-		Network: rookalpha.NetworkSpec{
-			Ports: []rookalpha.PortSpec{
-				{Name: MasterUIPortName, Port: 123},
-				{Name: MasterRPCPortName, Port: 456},
+	spec = yugabytedbv1alpha1.YugabyteDBClusterSpec{
+		Master: yugabytedbv1alpha1.ServerSpec{
+			Replicas: 0,
+			Network: rookalpha.NetworkSpec{
+				Ports: []rookalpha.PortSpec{
+					{Name: MasterUIPortName, Port: 123},
+					{Name: MasterRPCPortName, Port: 456},
+				},
 			},
+			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
 		},
-		Replicas: yugabytedbv1alpha1.ReplicaSpec{
-			Master:  0,
-			TServer: 1,
+		TServer: yugabytedbv1alpha1.ServerSpec{
+			Replicas:            1,
+			Network:             rookalpha.NetworkSpec{},
+			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
 		},
 	}
 	err = validateClusterSpec(spec)
@@ -78,34 +87,63 @@ func TestValidateClusterSpec(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "invalid Master replica count"))
 
 	// invalid tserver replica count
-	spec = yugabytedbv1alpha1.ClusterSpec{
-		Storage: yugabytedbv1alpha1.StorageSpec{},
-		Network: rookalpha.NetworkSpec{
-			Ports: []rookalpha.PortSpec{
-				{Name: MasterUIPortName, Port: 123},
-				{Name: MasterRPCPortName, Port: 456},
+	spec = yugabytedbv1alpha1.YugabyteDBClusterSpec{
+		Master: yugabytedbv1alpha1.ServerSpec{
+			Replicas: 1,
+			Network: rookalpha.NetworkSpec{
+				Ports: []rookalpha.PortSpec{
+					{Name: MasterUIPortName, Port: 123},
+					{Name: MasterRPCPortName, Port: 456},
+				},
 			},
+			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
 		},
-		Replicas: yugabytedbv1alpha1.ReplicaSpec{
-			Master:  1,
-			TServer: 0,
+		TServer: yugabytedbv1alpha1.ServerSpec{
+			Replicas:            0,
+			Network:             rookalpha.NetworkSpec{},
+			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
 		},
 	}
 	err = validateClusterSpec(spec)
 	assert.NotNil(t, err)
 	assert.True(t, strings.Contains(err.Error(), "invalid TServer replica count"))
 
-	// invalid network spec
-	spec = yugabytedbv1alpha1.ClusterSpec{
-		Storage: yugabytedbv1alpha1.StorageSpec{},
-		Network: rookalpha.NetworkSpec{
-			Ports: []rookalpha.PortSpec{
-				{Name: "http", Port: 123},
+	// invalid master network spec
+	spec = yugabytedbv1alpha1.YugabyteDBClusterSpec{
+		Master: yugabytedbv1alpha1.ServerSpec{
+			Replicas: 1,
+			Network: rookalpha.NetworkSpec{
+				Ports: []rookalpha.PortSpec{
+					{Name: "http", Port: 123},
+				},
 			},
+			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
 		},
-		Replicas: yugabytedbv1alpha1.ReplicaSpec{
-			Master:  1,
-			TServer: 1,
+		TServer: yugabytedbv1alpha1.ServerSpec{
+			Replicas:            1,
+			Network:             rookalpha.NetworkSpec{},
+			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
+		},
+	}
+	err = validateClusterSpec(spec)
+	assert.NotNil(t, err)
+	assert.True(t, strings.Contains(err.Error(), "Invalid port name"))
+
+	// invalid tserver network spec
+	spec = yugabytedbv1alpha1.YugabyteDBClusterSpec{
+		Master: yugabytedbv1alpha1.ServerSpec{
+			Replicas:            1,
+			Network:             rookalpha.NetworkSpec{},
+			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
+		},
+		TServer: yugabytedbv1alpha1.ServerSpec{
+			Replicas: 1,
+			Network: rookalpha.NetworkSpec{
+				Ports: []rookalpha.PortSpec{
+					{Name: "http", Port: 123},
+				},
+			},
+			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
 		},
 	}
 	err = validateClusterSpec(spec)
@@ -113,28 +151,35 @@ func TestValidateClusterSpec(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "Invalid port name"))
 
 	// Valid spec.
-	spec = yugabytedbv1alpha1.ClusterSpec{
-		Storage: yugabytedbv1alpha1.StorageSpec{},
-		Network: rookalpha.NetworkSpec{
-			Ports: []rookalpha.PortSpec{
-				{Name: MasterUIPortName, Port: 123},
-				{Name: MasterRPCPortName, Port: 456},
+	spec = yugabytedbv1alpha1.YugabyteDBClusterSpec{
+		Master: yugabytedbv1alpha1.ServerSpec{
+			Replicas: 1,
+			Network: rookalpha.NetworkSpec{
+				Ports: []rookalpha.PortSpec{
+					{Name: MasterUIPortName, Port: 123},
+					{Name: MasterRPCPortName, Port: 456},
+				},
 			},
+			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
 		},
-		Replicas: yugabytedbv1alpha1.ReplicaSpec{
-			Master:  1,
-			TServer: 1,
+		TServer: yugabytedbv1alpha1.ServerSpec{
+			Replicas:            1,
+			Network:             rookalpha.NetworkSpec{},
+			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
 		},
 	}
 	err = validateClusterSpec(spec)
 	assert.Nil(t, err)
 
 	// Valid spec, absent network attribute.
-	spec = yugabytedbv1alpha1.ClusterSpec{
-		Storage: yugabytedbv1alpha1.StorageSpec{},
-		Replicas: yugabytedbv1alpha1.ReplicaSpec{
-			Master:  1,
-			TServer: 1,
+	spec = yugabytedbv1alpha1.YugabyteDBClusterSpec{
+		Master: yugabytedbv1alpha1.ServerSpec{
+			Replicas:            1,
+			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
+		},
+		TServer: yugabytedbv1alpha1.ServerSpec{
+			Replicas:            1,
+			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
 		},
 	}
 	err = validateClusterSpec(spec)
@@ -220,11 +265,12 @@ func TestCreateMasterContainerCommand(t *testing.T) {
 		fmt.Sprintf("--server_broadcast_addresses=$(POD_NAME).yb-masters:%d", MasterRPCPortDefault),
 		"--use_private_ip=never",
 		fmt.Sprintf("--master_addresses=yb-masters.default.svc.cluster.local:%d", MasterRPCPortDefault),
+		"--use_initial_sys_catalog_snapshot=true",
 		fmt.Sprintf("--master_replication_factor=%d", replicationFactor),
 		"--logtostderr",
 	}
 
-	actualCommand := createMasterContainerCommand(int32(7100), int32(3))
+	actualCommand := createMasterContainerCommand("default", MasterNamePlural, int32(7100), int32(3))
 
 	assert.Equal(t, expectedCommand, actualCommand)
 }
@@ -245,97 +291,39 @@ func TestCreateTServerContainerCommand(t *testing.T) {
 		"--logtostderr",
 	}
 
-	actualCommand := createTServerContainerCommand(int32(7100), int32(9100), int32(5433), int32(3))
+	actualCommand := createTServerContainerCommand("default", TServerNamePlural, MasterNamePlural, int32(7100), int32(9100), int32(5433), int32(3))
 
 	assert.Equal(t, expectedCommand, actualCommand)
 }
 
 func TestOnAdd(t *testing.T) {
 	namespace := "rook-yugabytedb"
-	cluster := &yugabytedbv1alpha1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ybdb-cluster",
-			Namespace: namespace,
-		},
-		Spec: yugabytedbv1alpha1.ClusterSpec{
-			Storage: yugabytedbv1alpha1.StorageSpec{
-				Master: rookalpha.StorageScopeSpec{
-					Selection: rookalpha.Selection{
-						VolumeClaimTemplates: []v1.PersistentVolumeClaim{
-							{
-								ObjectMeta: metav1.ObjectMeta{
-									Name: VolumeDataName,
-								},
-								Spec: v1.PersistentVolumeClaimSpec{
-									AccessModes: []v1.PersistentVolumeAccessMode{
-										v1.ReadWriteOnce,
-									},
-									Resources: v1.ResourceRequirements{
-										Requests: v1.ResourceList{
-											v1.ResourceStorage: resource.MustParse("1Mi"),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				TServer: rookalpha.StorageScopeSpec{
-					Selection: rookalpha.Selection{
-						VolumeClaimTemplates: []v1.PersistentVolumeClaim{
-							{
-								ObjectMeta: metav1.ObjectMeta{
-									Name: VolumeDataName,
-								},
-								Spec: v1.PersistentVolumeClaimSpec{
-									AccessModes: []v1.PersistentVolumeAccessMode{
-										v1.ReadWriteOnce,
-									},
-									Resources: v1.ResourceRequirements{
-										Requests: v1.ResourceList{
-											v1.ResourceStorage: resource.MustParse("1Mi"),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			Network: rookalpha.NetworkSpec{},
-			Replicas: yugabytedbv1alpha1.ReplicaSpec{
-				Master:  3,
-				TServer: 3,
-			},
-		},
-	}
 
 	// initialize the controller and its dependencies
 	clientset := testop.New(3)
 	context := &clusterd.Context{Clientset: clientset}
 	controller := NewClusterController(context, "rook/yugabytedb:mockTag")
-	controller.createInitRetryInterval = 1 * time.Millisecond
+	controllerSet := &ControllerSet{
+		ClientSet:  clientset,
+		Context:    context,
+		Controller: controller,
+	}
 
-	// in a background thread, simulate running pods for Master & TServer processes. (fake statefulsets don't automatically do that)
-	go simulateMasterPodsRunning(clientset, namespace, cluster.Spec.Replicas.Master)
-	go simulateTServerPodsRunning(clientset, namespace, cluster.Spec.Replicas.TServer)
-
-	// call onAdd given the specified cluster
-	controller.onAdd(cluster)
+	cluster := simulateARunningYugabyteCluster(controllerSet, namespace, int32(3), false)
 
 	expectedServicePorts := []v1.ServicePort{
 		{Name: UIPortName, Port: MasterUIPortDefault, TargetPort: intstr.FromInt(int(MasterUIPortDefault))},
 	}
 
 	// verify Master UI service is created
-	clientService, err := clientset.CoreV1().Services(namespace).Get(MasterUIServiceName, metav1.GetOptions{})
+	clientService, err := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterUIServiceName), metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, clientService)
 	assert.Equal(t, v1.ServiceTypeClusterIP, clientService.Spec.Type)
 	assert.Equal(t, expectedServicePorts, clientService.Spec.Ports)
 
 	// verify TServer UI service is NOT created
-	clientService, err = clientset.CoreV1().Services(namespace).Get(TServerUIServiceName, metav1.GetOptions{})
+	clientService, err = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerUIServiceName), metav1.GetOptions{})
 	assert.Nil(t, clientService)
 	assert.NotNil(t, err)
 	assert.True(t, errors.IsNotFound(err))
@@ -346,7 +334,7 @@ func TestOnAdd(t *testing.T) {
 		{Name: RPCPortName, Port: MasterRPCPortDefault, TargetPort: intstr.FromInt(int(MasterRPCPortDefault))},
 	}
 
-	headlessService, err := clientset.CoreV1().Services(namespace).Get(MasterNamePlural, metav1.GetOptions{})
+	headlessService, err := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterNamePlural), metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, headlessService)
 	assert.Equal(t, "None", headlessService.Spec.ClusterIP)
@@ -361,20 +349,23 @@ func TestOnAdd(t *testing.T) {
 		{Name: PostgresPortName, Port: TServerPostgresPortDefault, TargetPort: intstr.FromInt(int(TServerPostgresPortDefault))},
 	}
 
-	headlessService, err = clientset.CoreV1().Services(namespace).Get(TServerNamePlural, metav1.GetOptions{})
+	headlessService, err = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerNamePlural), metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, headlessService)
 	assert.Equal(t, "None", headlessService.Spec.ClusterIP)
 	assert.Equal(t, expectedServicePorts, headlessService.Spec.Ports)
 
 	// verify Master statefulSet is created
-	statefulSets, err := clientset.AppsV1().StatefulSets(namespace).Get(MasterName, metav1.GetOptions{})
+	statefulSets, err := clientset.AppsV1().StatefulSets(namespace).Get(addCRNameSuffix(MasterName), metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, statefulSets)
 	assert.Equal(t, int32(3), *statefulSets.Spec.Replicas)
 	assert.Equal(t, 1, len(statefulSets.Spec.VolumeClaimTemplates))
-	assert.Equal(t, cluster.Spec.Storage.Master.Selection.VolumeClaimTemplates,
-		statefulSets.Spec.VolumeClaimTemplates)
+
+	vct := *cluster.Spec.Master.VolumeClaimTemplate.DeepCopy()
+	vct.Name = addCRNameSuffix(vct.Name)
+	expectedVolumeClaimTemplates := []v1.PersistentVolumeClaim{vct}
+	assert.Equal(t, expectedVolumeClaimTemplates, statefulSets.Spec.VolumeClaimTemplates)
 	assert.Equal(t, 1, len(statefulSets.Spec.Template.Spec.Containers))
 
 	container := statefulSets.Spec.Template.Spec.Containers[0]
@@ -384,7 +375,8 @@ func TestOnAdd(t *testing.T) {
 	}
 	assert.Equal(t, expectedContainerPorts, container.Ports)
 
-	expectedVolumeMounts := []v1.VolumeMount{{Name: VolumeDataName, MountPath: VolumeMountPath}}
+	volumeMountName := addCRNameSuffix(cluster.Spec.Master.VolumeClaimTemplate.Name)
+	expectedVolumeMounts := []v1.VolumeMount{{Name: volumeMountName, MountPath: VolumeMountPath}}
 	assert.Equal(t, expectedVolumeMounts, container.VolumeMounts)
 
 	expectedEnvVars := []v1.EnvVar{
@@ -414,9 +406,10 @@ func TestOnAdd(t *testing.T) {
 		"/home/yugabyte/bin/yb-master",
 		"--fs_data_dirs=/mnt/data0",
 		"--rpc_bind_addresses=$(POD_IP):7100",
-		"--server_broadcast_addresses=$(POD_NAME).yb-masters:7100",
+		fmt.Sprintf("--server_broadcast_addresses=$(POD_NAME).%s:7100", addCRNameSuffix(MasterNamePlural)),
 		"--use_private_ip=never",
-		"--master_addresses=yb-masters.default.svc.cluster.local:7100",
+		fmt.Sprintf("--master_addresses=%s.%s.svc.cluster.local:7100", addCRNameSuffix(MasterNamePlural), namespace),
+		"--use_initial_sys_catalog_snapshot=true",
 		"--master_replication_factor=3",
 		"--logtostderr",
 	}
@@ -424,33 +417,37 @@ func TestOnAdd(t *testing.T) {
 
 	// verify Master pods are created
 	pods, err := clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, MasterName),
+		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, addCRNameSuffix(MasterName)),
 	})
 	assert.Nil(t, err)
 	assert.NotNil(t, pods)
 	assert.Equal(t, 3, len(pods.Items))
 
 	// verify TServer statefulSet is created
-	statefulSets, err = clientset.AppsV1().StatefulSets(namespace).Get(TServerName, metav1.GetOptions{})
+	statefulSets, err = clientset.AppsV1().StatefulSets(namespace).Get(addCRNameSuffix(TServerName), metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, statefulSets)
 	assert.Equal(t, int32(3), *statefulSets.Spec.Replicas)
 	assert.Equal(t, 1, len(statefulSets.Spec.VolumeClaimTemplates))
-	assert.Equal(t, cluster.Spec.Storage.TServer.Selection.VolumeClaimTemplates,
-		statefulSets.Spec.VolumeClaimTemplates)
+
+	vct = *cluster.Spec.TServer.VolumeClaimTemplate.DeepCopy()
+	vct.Name = addCRNameSuffix(vct.Name)
+	expectedVolumeClaimTemplates = []v1.PersistentVolumeClaim{vct}
+	assert.Equal(t, expectedVolumeClaimTemplates, statefulSets.Spec.VolumeClaimTemplates)
 	assert.Equal(t, 1, len(statefulSets.Spec.Template.Spec.Containers))
 
 	container = statefulSets.Spec.Template.Spec.Containers[0]
 	expectedContainerPorts = []v1.ContainerPort{
 		{Name: TServerContainerUIPortName, ContainerPort: TServerUIPortDefault},
 		{Name: TServerContainerRPCPortName, ContainerPort: TServerRPCPortDefault},
-		{Name: TServerContainerCassandraPortName, ContainerPort: TServerCassandraPortDefault},
-		{Name: TServerContainerRedisPortName, ContainerPort: TServerRedisPortDefault},
-		{Name: TServerContainerPostgresPortName, ContainerPort: TServerPostgresPortDefault},
+		{Name: CassandraPortName, ContainerPort: TServerCassandraPortDefault},
+		{Name: RedisPortName, ContainerPort: TServerRedisPortDefault},
+		{Name: PostgresPortName, ContainerPort: TServerPostgresPortDefault},
 	}
 	assert.Equal(t, expectedContainerPorts, container.Ports)
 
-	expectedVolumeMounts = []v1.VolumeMount{{Name: VolumeDataName, MountPath: VolumeMountPath}}
+	volumeMountName = addCRNameSuffix(cluster.Spec.TServer.VolumeClaimTemplate.Name)
+	expectedVolumeMounts = []v1.VolumeMount{{Name: volumeMountName, MountPath: VolumeMountPath}}
 	assert.Equal(t, expectedVolumeMounts, container.VolumeMounts)
 
 	expectedEnvVars = []v1.EnvVar{
@@ -480,11 +477,11 @@ func TestOnAdd(t *testing.T) {
 		"/home/yugabyte/bin/yb-tserver",
 		"--fs_data_dirs=/mnt/data0",
 		"--rpc_bind_addresses=$(POD_IP):9100",
-		"--server_broadcast_addresses=$(POD_NAME).yb-tservers:9100",
+		fmt.Sprintf("--server_broadcast_addresses=$(POD_NAME).%s:9100", addCRNameSuffix(TServerNamePlural)),
 		"--start_pgsql_proxy",
 		"--pgsql_proxy_bind_address=$(POD_IP):5433",
 		"--use_private_ip=never",
-		"--tserver_master_addrs=yb-masters.default.svc.cluster.local:7100",
+		fmt.Sprintf("--tserver_master_addrs=%s.%s.svc.cluster.local:7100", addCRNameSuffix(MasterNamePlural), namespace),
 		"--tserver_master_replication_factor=3",
 		"--logtostderr",
 	}
@@ -492,7 +489,7 @@ func TestOnAdd(t *testing.T) {
 
 	// verify TServer pods are created
 	pods, err = clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, TServerName),
+		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, addCRNameSuffix(TServerName)),
 	})
 	assert.Nil(t, err)
 	assert.NotNil(t, pods)
@@ -501,90 +498,25 @@ func TestOnAdd(t *testing.T) {
 
 func TestOnAddWithTServerUI(t *testing.T) {
 	namespace := "rook-yugabytedb"
-	cluster := &yugabytedbv1alpha1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ybdb-cluster",
-			Namespace: namespace,
-		},
-		Spec: yugabytedbv1alpha1.ClusterSpec{
-			Storage: yugabytedbv1alpha1.StorageSpec{
-				Master: rookalpha.StorageScopeSpec{
-					Selection: rookalpha.Selection{
-						VolumeClaimTemplates: []v1.PersistentVolumeClaim{
-							{
-								ObjectMeta: metav1.ObjectMeta{
-									Name: VolumeDataName,
-								},
-								Spec: v1.PersistentVolumeClaimSpec{
-									AccessModes: []v1.PersistentVolumeAccessMode{
-										v1.ReadWriteOnce,
-									},
-									Resources: v1.ResourceRequirements{
-										Requests: v1.ResourceList{
-											v1.ResourceStorage: resource.MustParse("1Mi"),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				TServer: rookalpha.StorageScopeSpec{
-					Selection: rookalpha.Selection{
-						VolumeClaimTemplates: []v1.PersistentVolumeClaim{
-							{
-								ObjectMeta: metav1.ObjectMeta{
-									Name: VolumeDataName,
-								},
-								Spec: v1.PersistentVolumeClaimSpec{
-									AccessModes: []v1.PersistentVolumeAccessMode{
-										v1.ReadWriteOnce,
-									},
-									Resources: v1.ResourceRequirements{
-										Requests: v1.ResourceList{
-											v1.ResourceStorage: resource.MustParse("1Mi"),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			Network: rookalpha.NetworkSpec{
-				Ports: []rookalpha.PortSpec{
-					{
-						Name: "yb-tserver-ui",
-						Port: TServerUIPortDefault,
-					},
-				},
-			},
-			Replicas: yugabytedbv1alpha1.ReplicaSpec{
-				Master:  1,
-				TServer: 1,
-			},
-		},
-	}
 
 	// initialize the controller and its dependencies
 	clientset := testop.New(3)
 	context := &clusterd.Context{Clientset: clientset}
 	controller := NewClusterController(context, "rook/yugabytedb:mockTag")
-	controller.createInitRetryInterval = 1 * time.Millisecond
+	controllerSet := &ControllerSet{
+		ClientSet:  clientset,
+		Context:    context,
+		Controller: controller,
+	}
 
-	// in a background thread, simulate running pods for Master & TServer processes. (fake statefulsets don't automatically do that)
-	go simulateMasterPodsRunning(clientset, namespace, cluster.Spec.Replicas.Master)
-	go simulateTServerPodsRunning(clientset, namespace, cluster.Spec.Replicas.TServer)
-
-	// call onAdd given the specified cluster
-	controller.onAdd(cluster)
+	simulateARunningYugabyteCluster(controllerSet, namespace, int32(1), true)
 
 	expectedServicePorts := []v1.ServicePort{
 		{Name: UIPortName, Port: MasterUIPortDefault, TargetPort: intstr.FromInt(int(MasterUIPortDefault))},
 	}
 
 	// verify Master UI service is created
-	clientService, err := clientset.CoreV1().Services(namespace).Get(MasterUIServiceName, metav1.GetOptions{})
+	clientService, err := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterUIServiceName), metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, clientService)
 	assert.Equal(t, v1.ServiceTypeClusterIP, clientService.Spec.Type)
@@ -595,7 +527,7 @@ func TestOnAddWithTServerUI(t *testing.T) {
 		{Name: UIPortName, Port: TServerUIPortDefault, TargetPort: intstr.FromInt(int(TServerUIPortDefault))},
 	}
 
-	clientService, err = clientset.CoreV1().Services(namespace).Get(TServerUIServiceName, metav1.GetOptions{})
+	clientService, err = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerUIServiceName), metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, clientService)
 	assert.Equal(t, v1.ServiceTypeClusterIP, clientService.Spec.Type)
@@ -616,7 +548,6 @@ func TestOnUpdate_replicaCount(t *testing.T) {
 	clientset := testop.New(initialReplicatCount)
 	context := &clusterd.Context{Clientset: clientset}
 	controller := NewClusterController(context, "rook/yugabytedb:mockTag")
-	controller.createInitRetryInterval = 1 * time.Millisecond
 	controllerSet := &ControllerSet{
 		ClientSet:  clientset,
 		Context:    context,
@@ -629,19 +560,19 @@ func TestOnUpdate_replicaCount(t *testing.T) {
 	verifyAllComponentsExist(t, clientset, namespace)
 
 	// verify TServer UI service is NOT present
-	clientService, _ := clientset.CoreV1().Services(namespace).Get(TServerUIServiceName, metav1.GetOptions{})
+	clientService, _ := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerUIServiceName), metav1.GetOptions{})
 	assert.Nil(t, clientService)
 
 	// verify Master pods count matches initial count.
 	pods, _ := clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, MasterName),
+		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, addCRNameSuffix(MasterName)),
 	})
 	assert.NotNil(t, pods)
 	assert.Equal(t, initialReplicatCount, len(pods.Items))
 
 	// verify TServer pods count matches initial count.
 	pods, _ = clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, TServerName),
+		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, addCRNameSuffix(TServerName)),
 	})
 	assert.NotNil(t, pods)
 	assert.Equal(t, initialReplicatCount, len(pods.Items))
@@ -652,8 +583,8 @@ func TestOnUpdate_replicaCount(t *testing.T) {
 
 	newCluster := cluster.DeepCopy()
 
-	newCluster.Spec.Replicas.Master = int32(updatedMasterReplicaCount)
-	newCluster.Spec.Replicas.TServer = int32(updatedTServerReplicaCount)
+	newCluster.Spec.Master.Replicas = int32(updatedMasterReplicaCount)
+	newCluster.Spec.TServer.Replicas = int32(updatedTServerReplicaCount)
 
 	controller.onUpdate(cluster, newCluster)
 
@@ -661,19 +592,19 @@ func TestOnUpdate_replicaCount(t *testing.T) {
 	verifyAllComponentsExist(t, clientset, namespace)
 
 	// verify TServer UI service is NOT present
-	clientService, _ = clientset.CoreV1().Services(namespace).Get(TServerUIServiceName, metav1.GetOptions{})
+	clientService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerUIServiceName), metav1.GetOptions{})
 	assert.Nil(t, clientService)
 
 	// verify Master pods count matches updated count.
 	pods, _ = clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, MasterName),
+		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, addCRNameSuffix(MasterName)),
 	})
 	assert.NotNil(t, pods)
 	assert.Equal(t, initialReplicatCount, len(pods.Items))
 
 	// verify TServer pods count matches updated count.
 	pods, _ = clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, TServerName),
+		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, addCRNameSuffix(TServerName)),
 	})
 	assert.NotNil(t, pods)
 	assert.Equal(t, initialReplicatCount, len(pods.Items))
@@ -686,7 +617,6 @@ func TestOnUpdate_volumeClaimTemplate(t *testing.T) {
 	clientset := testop.New(initialReplicatCount)
 	context := &clusterd.Context{Clientset: clientset}
 	controller := NewClusterController(context, "rook/yugabytedb:mockTag")
-	controller.createInitRetryInterval = 1 * time.Millisecond
 	controllerSet := &ControllerSet{
 		ClientSet:  clientset,
 		Context:    context,
@@ -699,18 +629,18 @@ func TestOnUpdate_volumeClaimTemplate(t *testing.T) {
 	verifyAllComponentsExist(t, clientset, namespace)
 
 	// verify TServer UI service is NOT present
-	clientService, _ := clientset.CoreV1().Services(namespace).Get(TServerUIServiceName, metav1.GetOptions{})
+	clientService, _ := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerUIServiceName), metav1.GetOptions{})
 	assert.Nil(t, clientService)
 
 	// verify Master VolumeClaimTemplate size is as set initially.
-	statefulSet, _ := clientset.AppsV1().StatefulSets(namespace).Get(MasterName, metav1.GetOptions{})
+	statefulSet, _ := clientset.AppsV1().StatefulSets(namespace).Get(addCRNameSuffix(MasterName), metav1.GetOptions{})
 	assert.NotNil(t, statefulSet)
 	vct := statefulSet.Spec.VolumeClaimTemplates[0]
 	assert.NotNil(t, vct)
 	assert.Equal(t, resource.MustParse("1Mi"), vct.Spec.Resources.Requests[v1.ResourceStorage])
 
 	// verify TServer VolumeClaimTemplate size is as set initially.
-	statefulSet, _ = clientset.AppsV1().StatefulSets(namespace).Get(TServerName, metav1.GetOptions{})
+	statefulSet, _ = clientset.AppsV1().StatefulSets(namespace).Get(addCRNameSuffix(TServerName), metav1.GetOptions{})
 	assert.NotNil(t, statefulSet)
 	vct = statefulSet.Spec.VolumeClaimTemplates[0]
 	assert.NotNil(t, vct)
@@ -719,10 +649,10 @@ func TestOnUpdate_volumeClaimTemplate(t *testing.T) {
 	// Update volumeclaimtemplates size
 	newCluster := cluster.DeepCopy()
 
-	newCluster.Spec.Storage.Master.Selection.VolumeClaimTemplates[0].Spec.Resources.Requests = v1.ResourceList{
+	newCluster.Spec.Master.VolumeClaimTemplate.Spec.Resources.Requests = v1.ResourceList{
 		v1.ResourceStorage: resource.MustParse("10Mi"),
 	}
-	newCluster.Spec.Storage.TServer.Selection.VolumeClaimTemplates[0].Spec.Resources.Requests = v1.ResourceList{
+	newCluster.Spec.TServer.VolumeClaimTemplate.Spec.Resources.Requests = v1.ResourceList{
 		v1.ResourceStorage: resource.MustParse("20Mi"),
 	}
 
@@ -732,18 +662,18 @@ func TestOnUpdate_volumeClaimTemplate(t *testing.T) {
 	verifyAllComponentsExist(t, clientset, namespace)
 
 	// verify TServer UI service is NOT present
-	clientService, _ = clientset.CoreV1().Services(namespace).Get(TServerUIServiceName, metav1.GetOptions{})
+	clientService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerUIServiceName), metav1.GetOptions{})
 	assert.Nil(t, clientService)
 
 	// verify Master VolumeClaimTemplate is updated.
-	statefulSet, _ = clientset.AppsV1().StatefulSets(namespace).Get(MasterName, metav1.GetOptions{})
+	statefulSet, _ = clientset.AppsV1().StatefulSets(namespace).Get(addCRNameSuffix(MasterName), metav1.GetOptions{})
 	assert.NotNil(t, statefulSet)
 	vct = statefulSet.Spec.VolumeClaimTemplates[0]
 	assert.NotNil(t, vct)
 	assert.Equal(t, resource.MustParse("10Mi"), vct.Spec.Resources.Requests[v1.ResourceStorage])
 
 	// verify TServer VolumeClaimTemplate is updated.
-	statefulSet, _ = clientset.AppsV1().StatefulSets(namespace).Get(TServerName, metav1.GetOptions{})
+	statefulSet, _ = clientset.AppsV1().StatefulSets(namespace).Get(addCRNameSuffix(TServerName), metav1.GetOptions{})
 	assert.NotNil(t, statefulSet)
 	vct = statefulSet.Spec.VolumeClaimTemplates[0]
 	assert.NotNil(t, vct)
@@ -757,7 +687,6 @@ func TestOnUpdate_updateNetworkPorts(t *testing.T) {
 	clientset := testop.New(initialReplicatCount)
 	context := &clusterd.Context{Clientset: clientset}
 	controller := NewClusterController(context, "rook/yugabytedb:mockTag")
-	controller.createInitRetryInterval = 1 * time.Millisecond
 	controllerSet := &ControllerSet{
 		ClientSet:  clientset,
 		Context:    context,
@@ -771,19 +700,19 @@ func TestOnUpdate_updateNetworkPorts(t *testing.T) {
 	// verify Master UI service ports
 	expectedMUIServicePorts := getMasterUIServicePortsList(false)
 
-	clientService, _ := clientset.CoreV1().Services(namespace).Get(MasterUIServiceName, metav1.GetOptions{})
+	clientService, _ := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterUIServiceName), metav1.GetOptions{})
 	assert.NotNil(t, clientService)
 	assert.Equal(t, v1.ServiceTypeClusterIP, clientService.Spec.Type)
 	assert.Equal(t, expectedMUIServicePorts, clientService.Spec.Ports)
 
 	// verify TServer UI service is NOT created
-	clientService, _ = clientset.CoreV1().Services(namespace).Get(TServerUIServiceName, metav1.GetOptions{})
+	clientService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerUIServiceName), metav1.GetOptions{})
 	assert.Nil(t, clientService)
 
 	// verify Master headless Service ports
 	expectedMHServicePorts := getMasterHeadlessServicePortsList(false)
 
-	headlessService, _ := clientset.CoreV1().Services(namespace).Get(MasterNamePlural, metav1.GetOptions{})
+	headlessService, _ := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterNamePlural), metav1.GetOptions{})
 	assert.NotNil(t, headlessService)
 	assert.Equal(t, "None", headlessService.Spec.ClusterIP)
 	assert.Equal(t, expectedMHServicePorts, headlessService.Spec.Ports)
@@ -791,7 +720,7 @@ func TestOnUpdate_updateNetworkPorts(t *testing.T) {
 	// verify TServer headless Service ports
 	expectedTHServicePorts := getTServerHeadlessServicePortsList(false)
 
-	headlessService, _ = clientset.CoreV1().Services(namespace).Get(TServerNamePlural, metav1.GetOptions{})
+	headlessService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerNamePlural), metav1.GetOptions{})
 	assert.NotNil(t, headlessService)
 	assert.Equal(t, "None", headlessService.Spec.ClusterIP)
 	assert.Equal(t, expectedTHServicePorts, headlessService.Spec.Ports)
@@ -799,7 +728,8 @@ func TestOnUpdate_updateNetworkPorts(t *testing.T) {
 	// Update network ports
 	newCluster := cluster.DeepCopy()
 
-	newCluster.Spec.Network = getUpdatedNetworkSpec()
+	newCluster.Spec.Master.Network = getUpdatedMasterNetworkSpec()
+	newCluster.Spec.TServer.Network = getUpdatedTServerNetworkSpec()
 
 	controller.onUpdate(cluster, newCluster)
 
@@ -808,19 +738,19 @@ func TestOnUpdate_updateNetworkPorts(t *testing.T) {
 	// verify Master UI service ports
 	expectedMUIServicePorts = getMasterUIServicePortsList(true)
 
-	clientService, _ = clientset.CoreV1().Services(namespace).Get(MasterUIServiceName, metav1.GetOptions{})
+	clientService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterUIServiceName), metav1.GetOptions{})
 	assert.NotNil(t, clientService)
 	assert.Equal(t, v1.ServiceTypeClusterIP, clientService.Spec.Type)
 	assert.Equal(t, expectedMUIServicePorts, clientService.Spec.Ports)
 
 	// verify TServer UI service is NOT created
-	clientService, _ = clientset.CoreV1().Services(namespace).Get(TServerUIServiceName, metav1.GetOptions{})
+	clientService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerUIServiceName), metav1.GetOptions{})
 	assert.Nil(t, clientService)
 
 	// verify Master headless Service ports
 	expectedMHServicePorts = getMasterHeadlessServicePortsList(true)
 
-	headlessService, _ = clientset.CoreV1().Services(namespace).Get(MasterNamePlural, metav1.GetOptions{})
+	headlessService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterNamePlural), metav1.GetOptions{})
 	assert.NotNil(t, headlessService)
 	assert.Equal(t, "None", headlessService.Spec.ClusterIP)
 	assert.Equal(t, expectedMHServicePorts, headlessService.Spec.Ports)
@@ -832,7 +762,7 @@ func TestOnUpdate_updateNetworkPorts(t *testing.T) {
 	expectedTHServicePorts[0].Port = TServerUIPortDefault
 	expectedTHServicePorts[0].TargetPort = intstr.FromInt(int(TServerUIPortDefault))
 
-	headlessService, _ = clientset.CoreV1().Services(namespace).Get(TServerNamePlural, metav1.GetOptions{})
+	headlessService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerNamePlural), metav1.GetOptions{})
 	assert.NotNil(t, headlessService)
 	assert.Equal(t, "None", headlessService.Spec.ClusterIP)
 	assert.Equal(t, expectedTHServicePorts, headlessService.Spec.Ports)
@@ -845,7 +775,6 @@ func TestOnUpdate_addTServerUIPort(t *testing.T) {
 	clientset := testop.New(initialReplicatCount)
 	context := &clusterd.Context{Clientset: clientset}
 	controller := NewClusterController(context, "rook/yugabytedb:mockTag")
-	controller.createInitRetryInterval = 1 * time.Millisecond
 	controllerSet := &ControllerSet{
 		ClientSet:  clientset,
 		Context:    context,
@@ -859,19 +788,19 @@ func TestOnUpdate_addTServerUIPort(t *testing.T) {
 	// verify Master UI service ports
 	expectedMUIServicePorts := getMasterUIServicePortsList(false)
 
-	clientService, _ := clientset.CoreV1().Services(namespace).Get(MasterUIServiceName, metav1.GetOptions{})
+	clientService, _ := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterUIServiceName), metav1.GetOptions{})
 	assert.NotNil(t, clientService)
 	assert.Equal(t, v1.ServiceTypeClusterIP, clientService.Spec.Type)
 	assert.Equal(t, expectedMUIServicePorts, clientService.Spec.Ports)
 
 	// verify TServer UI service is NOT created
-	clientService, _ = clientset.CoreV1().Services(namespace).Get(TServerUIServiceName, metav1.GetOptions{})
+	clientService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerUIServiceName), metav1.GetOptions{})
 	assert.Nil(t, clientService)
 
 	// verify Master headless Service ports
 	expectedMHServicePorts := getMasterHeadlessServicePortsList(false)
 
-	headlessService, _ := clientset.CoreV1().Services(namespace).Get(MasterNamePlural, metav1.GetOptions{})
+	headlessService, _ := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterNamePlural), metav1.GetOptions{})
 	assert.NotNil(t, headlessService)
 	assert.Equal(t, "None", headlessService.Spec.ClusterIP)
 	assert.Equal(t, expectedMHServicePorts, headlessService.Spec.Ports)
@@ -879,7 +808,7 @@ func TestOnUpdate_addTServerUIPort(t *testing.T) {
 	// verify TServer headless Service ports
 	expectedTHServicePorts := getTServerHeadlessServicePortsList(false)
 
-	headlessService, _ = clientset.CoreV1().Services(namespace).Get(TServerNamePlural, metav1.GetOptions{})
+	headlessService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerNamePlural), metav1.GetOptions{})
 	assert.NotNil(t, headlessService)
 	assert.Equal(t, "None", headlessService.Spec.ClusterIP)
 	assert.Equal(t, expectedTHServicePorts, headlessService.Spec.Ports)
@@ -887,15 +816,16 @@ func TestOnUpdate_addTServerUIPort(t *testing.T) {
 	// Update network ports, which contain TServer UI Port number
 	newCluster := cluster.DeepCopy()
 
-	updatedNetworkSpec := getUpdatedNetworkSpec()
-	updatedNetworkSpec.Ports = append(updatedNetworkSpec.Ports, rookalpha.PortSpec{
+	updatedTServerNetworkSpec := getUpdatedTServerNetworkSpec()
+	updatedTServerNetworkSpec.Ports = append(updatedTServerNetworkSpec.Ports, rookalpha.PortSpec{
 		Name: TServerUIPortName,
 		Port: TServerUIPortDefault + int32(CustomPortShift),
 	})
 
-	newCluster.Spec.Network = updatedNetworkSpec
+	newCluster.Spec.Master.Network = getUpdatedMasterNetworkSpec()
+	newCluster.Spec.TServer.Network = updatedTServerNetworkSpec
 
-	logger.Info("Updated network specs: ", newCluster.Spec.Network)
+	logger.Info("Updated TServer network specs: ", newCluster.Spec.TServer.Network)
 
 	controller.onUpdate(cluster, newCluster)
 
@@ -904,7 +834,7 @@ func TestOnUpdate_addTServerUIPort(t *testing.T) {
 	// verify Master UI service ports
 	expectedMUIServicePorts = getMasterUIServicePortsList(true)
 
-	clientService, _ = clientset.CoreV1().Services(namespace).Get(MasterUIServiceName, metav1.GetOptions{})
+	clientService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterUIServiceName), metav1.GetOptions{})
 	assert.NotNil(t, clientService)
 	assert.Equal(t, v1.ServiceTypeClusterIP, clientService.Spec.Type)
 	assert.Equal(t, expectedMUIServicePorts, clientService.Spec.Ports)
@@ -912,7 +842,7 @@ func TestOnUpdate_addTServerUIPort(t *testing.T) {
 	// verify TServer UI service IS created
 	expectedTUIServicePorts := getTServerUIServicePortsList(true)
 
-	clientService2, err := clientset.CoreV1().Services(namespace).Get(TServerUIServiceName, metav1.GetOptions{})
+	clientService2, err := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerUIServiceName), metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, clientService2)
 	assert.Equal(t, v1.ServiceTypeClusterIP, clientService2.Spec.Type)
@@ -921,7 +851,7 @@ func TestOnUpdate_addTServerUIPort(t *testing.T) {
 	// verify Master headless Service ports
 	expectedMHServicePorts = getMasterHeadlessServicePortsList(true)
 
-	headlessService, _ = clientset.CoreV1().Services(namespace).Get(MasterNamePlural, metav1.GetOptions{})
+	headlessService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterNamePlural), metav1.GetOptions{})
 	assert.NotNil(t, headlessService)
 	assert.Equal(t, "None", headlessService.Spec.ClusterIP)
 	assert.Equal(t, expectedMHServicePorts, headlessService.Spec.Ports)
@@ -929,7 +859,7 @@ func TestOnUpdate_addTServerUIPort(t *testing.T) {
 	// verify TServer headless Service ports
 	expectedTHServicePorts = getTServerHeadlessServicePortsList(true)
 
-	headlessService, _ = clientset.CoreV1().Services(namespace).Get(TServerNamePlural, metav1.GetOptions{})
+	headlessService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerNamePlural), metav1.GetOptions{})
 	assert.NotNil(t, headlessService)
 	assert.Equal(t, "None", headlessService.Spec.ClusterIP)
 	assert.Equal(t, expectedTHServicePorts, headlessService.Spec.Ports)
@@ -942,7 +872,6 @@ func TestOnUpdate_removeTServerUIPort(t *testing.T) {
 	clientset := testop.New(initialReplicatCount)
 	context := &clusterd.Context{Clientset: clientset}
 	controller := NewClusterController(context, "rook/yugabytedb:mockTag")
-	controller.createInitRetryInterval = 1 * time.Millisecond
 	controllerSet := &ControllerSet{
 		ClientSet:  clientset,
 		Context:    context,
@@ -956,7 +885,7 @@ func TestOnUpdate_removeTServerUIPort(t *testing.T) {
 	// verify Master UI service ports
 	expectedMUIServicePorts := getMasterUIServicePortsList(false)
 
-	clientService, _ := clientset.CoreV1().Services(namespace).Get(MasterUIServiceName, metav1.GetOptions{})
+	clientService, _ := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterUIServiceName), metav1.GetOptions{})
 	assert.NotNil(t, clientService)
 	assert.Equal(t, v1.ServiceTypeClusterIP, clientService.Spec.Type)
 	assert.Equal(t, expectedMUIServicePorts, clientService.Spec.Ports)
@@ -964,7 +893,7 @@ func TestOnUpdate_removeTServerUIPort(t *testing.T) {
 	// verify TServer UI service IS created
 	expectedTUIServicePorts := getTServerUIServicePortsList(false)
 
-	clientService2, err := clientset.CoreV1().Services(namespace).Get(TServerUIServiceName, metav1.GetOptions{})
+	clientService2, err := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerUIServiceName), metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, clientService2)
 	assert.Equal(t, v1.ServiceTypeClusterIP, clientService2.Spec.Type)
@@ -973,7 +902,7 @@ func TestOnUpdate_removeTServerUIPort(t *testing.T) {
 	// verify Master headless Service ports
 	expectedMHServicePorts := getMasterHeadlessServicePortsList(false)
 
-	headlessService, _ := clientset.CoreV1().Services(namespace).Get(MasterNamePlural, metav1.GetOptions{})
+	headlessService, _ := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterNamePlural), metav1.GetOptions{})
 	assert.NotNil(t, headlessService)
 	assert.Equal(t, "None", headlessService.Spec.ClusterIP)
 	assert.Equal(t, expectedMHServicePorts, headlessService.Spec.Ports)
@@ -981,7 +910,7 @@ func TestOnUpdate_removeTServerUIPort(t *testing.T) {
 	// verify TServer headless Service ports
 	expectedTHServicePorts := getTServerHeadlessServicePortsList(false)
 
-	headlessService, _ = clientset.CoreV1().Services(namespace).Get(TServerNamePlural, metav1.GetOptions{})
+	headlessService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerNamePlural), metav1.GetOptions{})
 	assert.NotNil(t, headlessService)
 	assert.Equal(t, "None", headlessService.Spec.ClusterIP)
 	assert.Equal(t, expectedTHServicePorts, headlessService.Spec.Ports)
@@ -989,7 +918,8 @@ func TestOnUpdate_removeTServerUIPort(t *testing.T) {
 	// Update network ports, which lack TServer UI Port number
 	newCluster := cluster.DeepCopy()
 
-	newCluster.Spec.Network = getUpdatedNetworkSpec()
+	newCluster.Spec.Master.Network = getUpdatedMasterNetworkSpec()
+	newCluster.Spec.TServer.Network = getUpdatedTServerNetworkSpec()
 
 	controller.onUpdate(cluster, newCluster)
 
@@ -998,13 +928,13 @@ func TestOnUpdate_removeTServerUIPort(t *testing.T) {
 	// verify Master UI service ports
 	expectedMUIServicePorts = getMasterUIServicePortsList(true)
 
-	clientService, _ = clientset.CoreV1().Services(namespace).Get(MasterUIServiceName, metav1.GetOptions{})
+	clientService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterUIServiceName), metav1.GetOptions{})
 	assert.NotNil(t, clientService)
 	assert.Equal(t, v1.ServiceTypeClusterIP, clientService.Spec.Type)
 	assert.Equal(t, expectedMUIServicePorts, clientService.Spec.Ports)
 
 	// verify TServer UI service IS DELETED
-	clientService2, err = clientset.CoreV1().Services(namespace).Get(TServerUIServiceName, metav1.GetOptions{})
+	clientService2, err = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerUIServiceName), metav1.GetOptions{})
 	assert.NotNil(t, err)
 	assert.True(t, errors.IsNotFound(err))
 	assert.Nil(t, clientService2)
@@ -1012,7 +942,7 @@ func TestOnUpdate_removeTServerUIPort(t *testing.T) {
 	// verify Master headless Service ports
 	expectedMHServicePorts = getMasterHeadlessServicePortsList(true)
 
-	headlessService, _ = clientset.CoreV1().Services(namespace).Get(MasterNamePlural, metav1.GetOptions{})
+	headlessService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterNamePlural), metav1.GetOptions{})
 	assert.NotNil(t, headlessService)
 	assert.Equal(t, "None", headlessService.Spec.ClusterIP)
 	assert.Equal(t, expectedMHServicePorts, headlessService.Spec.Ports)
@@ -1024,7 +954,7 @@ func TestOnUpdate_removeTServerUIPort(t *testing.T) {
 	expectedTHServicePorts[0].Port = TServerUIPortDefault
 	expectedTHServicePorts[0].TargetPort = intstr.FromInt(int(TServerUIPortDefault))
 
-	headlessService, _ = clientset.CoreV1().Services(namespace).Get(TServerNamePlural, metav1.GetOptions{})
+	headlessService, _ = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerNamePlural), metav1.GetOptions{})
 	assert.NotNil(t, headlessService)
 	assert.Equal(t, "None", headlessService.Spec.ClusterIP)
 	assert.Equal(t, expectedTHServicePorts, headlessService.Spec.Ports)
@@ -1033,113 +963,100 @@ func TestOnUpdate_removeTServerUIPort(t *testing.T) {
 // Verify all must-have components exist after updation.
 func verifyAllComponentsExist(t *testing.T, clientset *fake.Clientset, namespace string) {
 	// verify Master UI service is created
-	clientService, err := clientset.CoreV1().Services(namespace).Get(MasterUIServiceName, metav1.GetOptions{})
+	clientService, err := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterUIServiceName), metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, clientService)
 
 	// verify Master headless Service is created
-	headlessService, err := clientset.CoreV1().Services(namespace).Get(MasterNamePlural, metav1.GetOptions{})
+	headlessService, err := clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(MasterNamePlural), metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, headlessService)
 
 	// verify TServer headless Service is created
-	headlessService, err = clientset.CoreV1().Services(namespace).Get(TServerNamePlural, metav1.GetOptions{})
+	headlessService, err = clientset.CoreV1().Services(namespace).Get(addCRNameSuffix(TServerNamePlural), metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, headlessService)
 
 	// verify Master statefulSet is created
-	statefulSets, err := clientset.AppsV1().StatefulSets(namespace).Get(MasterName, metav1.GetOptions{})
+	statefulSets, err := clientset.AppsV1().StatefulSets(namespace).Get(addCRNameSuffix(MasterName), metav1.GetOptions{})
 	assert.NotNil(t, statefulSets)
 
 	// verify Master pods are created
 	pods, err := clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, MasterName),
+		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, addCRNameSuffix(MasterName)),
 	})
 	assert.Nil(t, err)
 	assert.NotNil(t, pods)
 
 	// verify TServer statefulSet is created
-	statefulSets, err = clientset.AppsV1().StatefulSets(namespace).Get(TServerName, metav1.GetOptions{})
+	statefulSets, err = clientset.AppsV1().StatefulSets(namespace).Get(addCRNameSuffix(TServerName), metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, statefulSets)
 
 	// verify TServer pods are created
 	pods, err = clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, TServerName),
+		LabelSelector: fmt.Sprintf("%s=%s", k8sutil.AppAttr, addCRNameSuffix(TServerName)),
 	})
 	assert.Nil(t, err)
 	assert.NotNil(t, pods)
 }
 
-func simulateARunningYugabyteCluster(controllerSet *ControllerSet, namespace string, replicaCount int32, addTServerUIService bool) *yugabytedbv1alpha1.Cluster {
-	cluster := &yugabytedbv1alpha1.Cluster{
+func simulateARunningYugabyteCluster(controllerSet *ControllerSet, namespace string, replicaCount int32, addTServerUIService bool) *yugabytedbv1alpha1.YugabyteDBCluster {
+	cluster := &yugabytedbv1alpha1.YugabyteDBCluster{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ybdb-cluster",
+			Name:      ClusterName,
 			Namespace: namespace,
 		},
-		Spec: yugabytedbv1alpha1.ClusterSpec{
-			Storage: yugabytedbv1alpha1.StorageSpec{
-				Master: rookalpha.StorageScopeSpec{
-					Selection: rookalpha.Selection{
-						VolumeClaimTemplates: []v1.PersistentVolumeClaim{
-							{
-								ObjectMeta: metav1.ObjectMeta{
-									Name: VolumeDataName,
-								},
-								Spec: v1.PersistentVolumeClaimSpec{
-									AccessModes: []v1.PersistentVolumeAccessMode{
-										v1.ReadWriteOnce,
-									},
-									Resources: v1.ResourceRequirements{
-										Requests: v1.ResourceList{
-											v1.ResourceStorage: resource.MustParse("1Mi"),
-										},
-									},
-								},
-							},
-						},
+		Spec: yugabytedbv1alpha1.YugabyteDBClusterSpec{
+			Master: yugabytedbv1alpha1.ServerSpec{
+				Replicas: replicaCount,
+				VolumeClaimTemplate: v1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: VolumeDataName,
 					},
-				},
-				TServer: rookalpha.StorageScopeSpec{
-					Selection: rookalpha.Selection{
-						VolumeClaimTemplates: []v1.PersistentVolumeClaim{
-							{
-								ObjectMeta: metav1.ObjectMeta{
-									Name: VolumeDataName,
-								},
-								Spec: v1.PersistentVolumeClaimSpec{
-									AccessModes: []v1.PersistentVolumeAccessMode{
-										v1.ReadWriteOnce,
-									},
-									Resources: v1.ResourceRequirements{
-										Requests: v1.ResourceList{
-											v1.ResourceStorage: resource.MustParse("1Mi"),
-										},
-									},
-								},
+					Spec: v1.PersistentVolumeClaimSpec{
+						AccessModes: []v1.PersistentVolumeAccessMode{
+							v1.ReadWriteOnce,
+						},
+						Resources: v1.ResourceRequirements{
+							Requests: v1.ResourceList{
+								v1.ResourceStorage: resource.MustParse("1Mi"),
 							},
 						},
 					},
 				},
 			},
-			Network: rookalpha.NetworkSpec{},
-			Replicas: yugabytedbv1alpha1.ReplicaSpec{
-				Master:  replicaCount,
-				TServer: replicaCount,
+			TServer: yugabytedbv1alpha1.ServerSpec{
+				Replicas: replicaCount,
+				VolumeClaimTemplate: v1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: VolumeDataName,
+					},
+					Spec: v1.PersistentVolumeClaimSpec{
+						AccessModes: []v1.PersistentVolumeAccessMode{
+							v1.ReadWriteOnce,
+						},
+						Resources: v1.ResourceRequirements{
+							Requests: v1.ResourceList{
+								v1.ResourceStorage: resource.MustParse("1Mi"),
+							},
+						},
+					},
+				},
 			},
 		},
 	}
 
 	if addTServerUIService {
-		cluster.Spec.Network.Ports = append(cluster.Spec.Network.Ports, rookalpha.PortSpec{
+		cluster.Spec.TServer.Network.Ports = append(cluster.Spec.TServer.Network.Ports, rookalpha.PortSpec{
 			Name: TServerUIPortName,
 			Port: TServerUIPortDefault,
 		})
 	}
 
 	// in a background thread, simulate running pods for Master & TServer processes. (fake statefulsets don't automatically do that)
-	go simulateMasterPodsRunning(controllerSet.ClientSet, namespace, cluster.Spec.Replicas.Master)
-	go simulateTServerPodsRunning(controllerSet.ClientSet, namespace, cluster.Spec.Replicas.TServer)
+	go simulateMasterPodsRunning(controllerSet.ClientSet, namespace, replicaCount)
+	go simulateTServerPodsRunning(controllerSet.ClientSet, namespace, replicaCount)
 
 	// call onAdd given the specified cluster
 	controllerSet.Controller.onAdd(cluster)
@@ -1148,11 +1065,11 @@ func simulateARunningYugabyteCluster(controllerSet *ControllerSet, namespace str
 }
 
 func simulateMasterPodsRunning(clientset *fake.Clientset, namespace string, podCount int32) {
-	simulatePodsRunning(clientset, namespace, podCount, MasterName)
+	simulatePodsRunning(clientset, namespace, podCount, addCRNameSuffix(MasterName))
 }
 
 func simulateTServerPodsRunning(clientset *fake.Clientset, namespace string, podCount int32) {
-	simulatePodsRunning(clientset, namespace, podCount, TServerName)
+	simulatePodsRunning(clientset, namespace, podCount, addCRNameSuffix(TServerName))
 }
 
 func simulatePodsRunning(clientset *fake.Clientset, namespace string, podCount int32, podName string) {
@@ -1235,7 +1152,7 @@ func getServicePort(portName string, portNum int) v1.ServicePort {
 	}
 }
 
-func getUpdatedNetworkSpec() rookalpha.NetworkSpec {
+func getUpdatedMasterNetworkSpec() rookalpha.NetworkSpec {
 	return rookalpha.NetworkSpec{
 		Ports: []rookalpha.PortSpec{
 			{
@@ -1246,6 +1163,13 @@ func getUpdatedNetworkSpec() rookalpha.NetworkSpec {
 				Name: MasterRPCPortName,
 				Port: MasterRPCPortDefault + int32(CustomPortShift),
 			},
+		},
+	}
+}
+
+func getUpdatedTServerNetworkSpec() rookalpha.NetworkSpec {
+	return rookalpha.NetworkSpec{
+		Ports: []rookalpha.PortSpec{
 			{
 				Name: TServerRPCPortName,
 				Port: TServerRPCPortDefault + int32(CustomPortShift),
@@ -1264,4 +1188,8 @@ func getUpdatedNetworkSpec() rookalpha.NetworkSpec {
 			},
 		},
 	}
+}
+
+func addCRNameSuffix(str string) string {
+	return fmt.Sprintf("%s-%s", str, ClusterName)
 }
