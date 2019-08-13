@@ -28,8 +28,8 @@ type FakeYugabytedbV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeYugabytedbV1alpha1) Clusters(namespace string) v1alpha1.ClusterInterface {
-	return &FakeClusters{c, namespace}
+func (c *FakeYugabytedbV1alpha1) YugabyteDBClusters(namespace string) v1alpha1.YugabyteDBClusterInterface {
+	return &FakeYugabyteDBClusters{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

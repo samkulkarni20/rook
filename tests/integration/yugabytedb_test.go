@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Rook Authors. All rights reserved.
+Copyright 2019 The Rook Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -93,10 +93,10 @@ func (y *YugabyteDBSuite) TestYugabyteDBClusterComponents() {
 		"1 rook-cockroachdb-operator must be in Running state")
 
 	// verify master pod is running
-	assert.True(y.T(), y.k8sHelper.CheckPodCountAndState("yb-master", y.namespace, y.replicaCount, "Running"),
+	assert.True(y.T(), y.k8sHelper.CheckPodCountAndState("yb-master-rook-yugabytedb", y.namespace, y.replicaCount, "Running"),
 		fmt.Sprintf("%d yb-master must be in Running state", y.replicaCount))
 
 	// verify master pod is running
-	assert.True(y.T(), y.k8sHelper.CheckPodCountAndState("yb-tserver", y.namespace, y.replicaCount, "Running"),
+	assert.True(y.T(), y.k8sHelper.CheckPodCountAndState("yb-tserver-rook-yugabytedb", y.namespace, y.replicaCount, "Running"),
 		fmt.Sprintf("%d yb-tserver must be in Running state", y.replicaCount))
 }
