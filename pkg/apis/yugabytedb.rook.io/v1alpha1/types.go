@@ -32,21 +32,21 @@ import (
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type YugabyteDBCluster struct {
+type YBCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              YugabyteDBClusterSpec `json:"spec"`
+	Spec              YBClusterSpec `json:"spec"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type YugabyteDBClusterList struct {
+type YBClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []YugabyteDBCluster `json:"items"`
+	Items           []YBCluster `json:"items"`
 }
 
-type YugabyteDBClusterSpec struct {
+type YBClusterSpec struct {
 	Annotations rook.Annotations `json:"annotations,omitempty"`
 	Master      ServerSpec       `json:"master"`
 	TServer     ServerSpec       `json:"tserver"`

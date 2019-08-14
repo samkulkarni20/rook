@@ -85,7 +85,7 @@ func (y *YugabyteDBSuite) Teardown() {
 	y.ybdbInstaller.RemoveAllYugabyteDBResources(y.systemNS, y.namespace)
 }
 
-func (y *YugabyteDBSuite) TestYugabyteDBClusterComponents() {
+func (y *YugabyteDBSuite) TestYBClusterComponents() {
 	logger.Info("Verifying yugabytedb cluster is created & has all required components")
 
 	// verify operator pod is running

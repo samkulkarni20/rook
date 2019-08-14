@@ -31,59 +31,59 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// YugabyteDBClusterInformer provides access to a shared informer and lister for
-// YugabyteDBClusters.
-type YugabyteDBClusterInformer interface {
+// YBClusterInformer provides access to a shared informer and lister for
+// YBClusters.
+type YBClusterInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.YugabyteDBClusterLister
+	Lister() v1alpha1.YBClusterLister
 }
 
-type yugabyteDBClusterInformer struct {
+type yBClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewYugabyteDBClusterInformer constructs a new informer for YugabyteDBCluster type.
+// NewYBClusterInformer constructs a new informer for YBCluster type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewYugabyteDBClusterInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredYugabyteDBClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewYBClusterInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredYBClusterInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredYugabyteDBClusterInformer constructs a new informer for YugabyteDBCluster type.
+// NewFilteredYBClusterInformer constructs a new informer for YBCluster type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredYugabyteDBClusterInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredYBClusterInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.YugabytedbV1alpha1().YugabyteDBClusters(namespace).List(options)
+				return client.YugabytedbV1alpha1().YBClusters(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.YugabytedbV1alpha1().YugabyteDBClusters(namespace).Watch(options)
+				return client.YugabytedbV1alpha1().YBClusters(namespace).Watch(options)
 			},
 		},
-		&yugabytedbrookiov1alpha1.YugabyteDBCluster{},
+		&yugabytedbrookiov1alpha1.YBCluster{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *yugabyteDBClusterInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredYugabyteDBClusterInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *yBClusterInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredYBClusterInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *yugabyteDBClusterInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&yugabytedbrookiov1alpha1.YugabyteDBCluster{}, f.defaultInformer)
+func (f *yBClusterInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&yugabytedbrookiov1alpha1.YBCluster{}, f.defaultInformer)
 }
 
-func (f *yugabyteDBClusterInformer) Lister() v1alpha1.YugabyteDBClusterLister {
-	return v1alpha1.NewYugabyteDBClusterLister(f.Informer().GetIndexer())
+func (f *yBClusterInformer) Lister() v1alpha1.YBClusterLister {
+	return v1alpha1.NewYBClusterLister(f.Informer().GetIndexer())
 }

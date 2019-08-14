@@ -24,8 +24,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
-	// YugabyteDBClusters returns a YugabyteDBClusterInformer.
-	YugabyteDBClusters() YugabyteDBClusterInformer
+	// YBClusters returns a YBClusterInformer.
+	YBClusters() YBClusterInformer
 }
 
 type version struct {
@@ -39,7 +39,7 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// YugabyteDBClusters returns a YugabyteDBClusterInformer.
-func (v *version) YugabyteDBClusters() YugabyteDBClusterInformer {
-	return &yugabyteDBClusterInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+// YBClusters returns a YBClusterInformer.
+func (v *version) YBClusters() YBClusterInformer {
+	return &yBClusterInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

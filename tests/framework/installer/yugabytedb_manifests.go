@@ -127,21 +127,21 @@ func (_ *YugabyteDBManifests) GetYugabyteDBCRDSpecs() string {
 	return `apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: yugabytedbclusters.yugabytedb.rook.io
+  name: ybclusters.yugabytedb.rook.io
 spec:
   group: yugabytedb.rook.io
   names:
-    kind: YugabyteDBCluster
-    listKind: YugabyteDBClusterList
-    singular: yugabytedbcluster
-    plural: yugabytedbclusters
+    kind: YBCluster
+    listKind: YBClusterList
+    singular: ybcluster
+    plural: ybclusters
   scope: Namespaced
   version: v1alpha1`
 }
 
 func (_ *YugabyteDBManifests) GetYugabyteDBClusterSpecs(namespace string, replicaCount int) string {
 	return `apiVersion: yugabytedb.rook.io/v1alpha1
-kind: YugabyteDBCluster
+kind: YBCluster
 metadata:
   name: rook-yugabytedb
   namespace: ` + namespace + `

@@ -43,7 +43,7 @@ const (
 
 func TestValidateClusterSpec(t *testing.T) {
 	// invalid master & tserver replica count
-	spec := yugabytedbv1alpha1.YugabyteDBClusterSpec{
+	spec := yugabytedbv1alpha1.YBClusterSpec{
 		Master: yugabytedbv1alpha1.ServerSpec{
 			Replicas: 0,
 			Network: rookalpha.NetworkSpec{
@@ -65,7 +65,7 @@ func TestValidateClusterSpec(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "invalid Master replica count"))
 
 	// invalid master replica count
-	spec = yugabytedbv1alpha1.YugabyteDBClusterSpec{
+	spec = yugabytedbv1alpha1.YBClusterSpec{
 		Master: yugabytedbv1alpha1.ServerSpec{
 			Replicas: 0,
 			Network: rookalpha.NetworkSpec{
@@ -87,7 +87,7 @@ func TestValidateClusterSpec(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "invalid Master replica count"))
 
 	// invalid tserver replica count
-	spec = yugabytedbv1alpha1.YugabyteDBClusterSpec{
+	spec = yugabytedbv1alpha1.YBClusterSpec{
 		Master: yugabytedbv1alpha1.ServerSpec{
 			Replicas: 1,
 			Network: rookalpha.NetworkSpec{
@@ -109,7 +109,7 @@ func TestValidateClusterSpec(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "invalid TServer replica count"))
 
 	// invalid master network spec
-	spec = yugabytedbv1alpha1.YugabyteDBClusterSpec{
+	spec = yugabytedbv1alpha1.YBClusterSpec{
 		Master: yugabytedbv1alpha1.ServerSpec{
 			Replicas: 1,
 			Network: rookalpha.NetworkSpec{
@@ -130,7 +130,7 @@ func TestValidateClusterSpec(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "Invalid port name"))
 
 	// invalid tserver network spec
-	spec = yugabytedbv1alpha1.YugabyteDBClusterSpec{
+	spec = yugabytedbv1alpha1.YBClusterSpec{
 		Master: yugabytedbv1alpha1.ServerSpec{
 			Replicas:            1,
 			Network:             rookalpha.NetworkSpec{},
@@ -151,7 +151,7 @@ func TestValidateClusterSpec(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "Invalid port name"))
 
 	// Valid spec.
-	spec = yugabytedbv1alpha1.YugabyteDBClusterSpec{
+	spec = yugabytedbv1alpha1.YBClusterSpec{
 		Master: yugabytedbv1alpha1.ServerSpec{
 			Replicas: 1,
 			Network: rookalpha.NetworkSpec{
@@ -172,7 +172,7 @@ func TestValidateClusterSpec(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Valid spec, absent network attribute.
-	spec = yugabytedbv1alpha1.YugabyteDBClusterSpec{
+	spec = yugabytedbv1alpha1.YBClusterSpec{
 		Master: yugabytedbv1alpha1.ServerSpec{
 			Replicas:            1,
 			VolumeClaimTemplate: v1.PersistentVolumeClaim{},
@@ -1001,13 +1001,13 @@ func verifyAllComponentsExist(t *testing.T, clientset *fake.Clientset, namespace
 	assert.NotNil(t, pods)
 }
 
-func simulateARunningYugabyteCluster(controllerSet *ControllerSet, namespace string, replicaCount int32, addTServerUIService bool) *yugabytedbv1alpha1.YugabyteDBCluster {
-	cluster := &yugabytedbv1alpha1.YugabyteDBCluster{
+func simulateARunningYugabyteCluster(controllerSet *ControllerSet, namespace string, replicaCount int32, addTServerUIService bool) *yugabytedbv1alpha1.YBCluster {
+	cluster := &yugabytedbv1alpha1.YBCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ClusterName,
 			Namespace: namespace,
 		},
-		Spec: yugabytedbv1alpha1.YugabyteDBClusterSpec{
+		Spec: yugabytedbv1alpha1.YBClusterSpec{
 			Master: yugabytedbv1alpha1.ServerSpec{
 				Replicas: replicaCount,
 				VolumeClaimTemplate: v1.PersistentVolumeClaim{

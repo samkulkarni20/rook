@@ -4,9 +4,9 @@ metadata:
   name: rook-yugabytedb
 ---
 apiVersion: yugabytedb.rook.io/v1alpha1
-kind: YugabyteDBCluster
+kind: YBCluster
 metadata:
-  name: rook-yugabytedb
+  name: hello-ybdb-cluster
   namespace: rook-yugabytedb
 spec:
   master:

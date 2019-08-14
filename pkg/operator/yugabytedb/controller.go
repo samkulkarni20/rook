@@ -36,8 +36,8 @@ import (
 )
 
 const (
-	CustomResourceName          = "yugabytedbcluster"
-	CustomResourceNamePlural    = "yugabytedbclusters"
+	CustomResourceName          = "ybcluster"
+	CustomResourceNamePlural    = "ybclusters"
 	MasterName                  = "yb-master"
 	MasterNamePlural            = "yb-masters"
 	TServerName                 = "yb-tserver"
@@ -83,7 +83,7 @@ var ClusterResource = opkit.CustomResource{
 	Group:   yugabytedbv1alpha1.CustomResourceGroup,
 	Version: yugabytedbv1alpha1.Version,
 	Scope:   apiextensionsv1beta1.NamespaceScoped,
-	Kind:    reflect.TypeOf(yugabytedbv1alpha1.YugabyteDBCluster{}).Name(),
+	Kind:    reflect.TypeOf(yugabytedbv1alpha1.YBCluster{}).Name(),
 }
 
 type ClusterController struct {
@@ -102,7 +102,7 @@ type cluster struct {
 	context     *clusterd.Context
 	name        string
 	namespace   string
-	spec        yugabytedbv1alpha1.YugabyteDBClusterSpec
+	spec        yugabytedbv1alpha1.YBClusterSpec
 	annotations rookv1alpha2.Annotations
 	ownerRef    metav1.OwnerReference
 }
@@ -115,7 +115,7 @@ type serverPorts struct {
 	ui, rpc, cassandra, redis, postgres int32
 }
 
-func newCluster(c *yugabytedbv1alpha1.YugabyteDBCluster, context *clusterd.Context) *cluster {
+func newCluster(c *yugabytedbv1alpha1.YBCluster, context *clusterd.Context) *cluster {
 	return &cluster{
 		context:     context,
 		name:        c.Name,
@@ -146,14 +146,14 @@ func (c *ClusterController) StartWatch(namespace string, stopCh chan struct{}) e
 
 	logger.Infof("start watching yugabytedb clusters in all namespaces")
 	watcher := opkit.NewWatcher(ClusterResource, namespace, resourceHandlerFuncs, c.context.RookClientset.YugabytedbV1alpha1().RESTClient())
-	go watcher.Watch(&yugabytedbv1alpha1.YugabyteDBCluster{}, stopCh)
+	go watcher.Watch(&yugabytedbv1alpha1.YBCluster{}, stopCh)
 
 	return nil
 }
 
 func (c *ClusterController) onAdd(obj interface{}) {
 	// TODO Cleanup resources if something fails in between.
-	clusterObj := obj.(*yugabytedbv1alpha1.YugabyteDBCluster).DeepCopy()
+	clusterObj := obj.(*yugabytedbv1alpha1.YBCluster).DeepCopy()
 	logger.Infof("new cluster %s added to namespace %s", clusterObj.Name, clusterObj.Namespace)
 
 	cluster := newCluster(clusterObj, c.context)
@@ -197,8 +197,8 @@ func (c *ClusterController) onAdd(obj interface{}) {
 }
 
 func (c *ClusterController) onUpdate(oldObj, newObj interface{}) {
-	_ = oldObj.(*yugabytedbv1alpha1.YugabyteDBCluster).DeepCopy()
-	newObjCluster := newObj.(*yugabytedbv1alpha1.YugabyteDBCluster).DeepCopy()
+	_ = oldObj.(*yugabytedbv1alpha1.YBCluster).DeepCopy()
+	newObjCluster := newObj.(*yugabytedbv1alpha1.YBCluster).DeepCopy()
 	newYBCluster := newCluster(newObjCluster, c.context)
 
 	// Validate new spec
@@ -244,7 +244,7 @@ func (c *ClusterController) onUpdate(oldObj, newObj interface{}) {
 }
 
 func (c *ClusterController) onDelete(obj interface{}) {
-	cluster, ok := obj.(*yugabytedbv1alpha1.YugabyteDBCluster)
+	cluster, ok := obj.(*yugabytedbv1alpha1.YBCluster)
 	if !ok {
 		return
 	}
@@ -693,7 +693,7 @@ func createContainer(cluster *cluster, containerImage string, isTServerStatefuls
 	}
 }
 
-func validateClusterSpec(spec yugabytedbv1alpha1.YugabyteDBClusterSpec) error {
+func validateClusterSpec(spec yugabytedbv1alpha1.YBClusterSpec) error {
 
 	if spec.Master.Replicas < 1 {
 		return fmt.Errorf("invalid Master replica count: %d. Must be at least 1", spec.Master.Replicas)

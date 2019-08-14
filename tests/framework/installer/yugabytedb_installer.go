@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	CRDFullyQualifiedName         = "yugabytedbclusters.yugabytedb.rook.io"
-	CRDFullyQualifiedNameSingular = "yugabytedbcluster.yugabytedb.rook.io"
+	CRDFullyQualifiedName         = "ybclusters.yugabytedb.rook.io"
+	CRDFullyQualifiedNameSingular = "ybcluster.yugabytedb.rook.io"
 )
 
 type YugabyteDBInstaller struct {
@@ -130,7 +130,7 @@ func (y *YugabyteDBInstaller) RemoveAllYugabyteDBResources(systemNS, namespace s
 	checkError(y.T(), err, fmt.Sprintf("cannot remove cluster %s", namespace))
 
 	crdCheckerFunc := func() error {
-		_, err := y.k8sHelper.RookClientset.YugabytedbV1alpha1().YugabyteDBClusters(namespace).Get(namespace, metav1.GetOptions{})
+		_, err := y.k8sHelper.RookClientset.YugabytedbV1alpha1().YBClusters(namespace).Get(namespace, metav1.GetOptions{})
 		return err
 	}
 	err = y.k8sHelper.WaitForCustomResourceDeletion(namespace, crdCheckerFunc)

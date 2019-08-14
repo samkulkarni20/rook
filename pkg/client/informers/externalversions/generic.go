@@ -110,8 +110,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Rook().V1alpha2().Volumes().Informer()}, nil
 
 		// Group=yugabytedb.rook.io, Version=v1alpha1
-	case yugabytedbrookiov1alpha1.SchemeGroupVersion.WithResource("yugabytedbclusters"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Yugabytedb().V1alpha1().YugabyteDBClusters().Informer()}, nil
+	case yugabytedbrookiov1alpha1.SchemeGroupVersion.WithResource("ybclusters"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Yugabytedb().V1alpha1().YBClusters().Informer()}, nil
 
 	}
 

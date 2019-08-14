@@ -27,7 +27,7 @@ import (
 
 type YugabytedbV1alpha1Interface interface {
 	RESTClient() rest.Interface
-	YugabyteDBClustersGetter
+	YBClustersGetter
 }
 
 // YugabytedbV1alpha1Client is used to interact with features provided by the yugabytedb.rook.io group.
@@ -35,8 +35,8 @@ type YugabytedbV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *YugabytedbV1alpha1Client) YugabyteDBClusters(namespace string) YugabyteDBClusterInterface {
-	return newYugabyteDBClusters(c, namespace)
+func (c *YugabytedbV1alpha1Client) YBClusters(namespace string) YBClusterInterface {
+	return newYBClusters(c, namespace)
 }
 
 // NewForConfig creates a new YugabytedbV1alpha1Client for the given config.
