@@ -2,13 +2,13 @@ YugaByte DB is a high-performance distributed SQL database. (More information [h
 
 **What is use case behind this feature:**
 
-A cluster of YugaByte DB backed by Rook should be created using the `yugabytedbclusters.yugabytedb.rook.io` custom resource definition. Below is a sample custom resource spec for creating a 3-master, 3 t-servers cluster using the CRD. The sample is followed by an explanation of different configuration options available on the YugaByte DB CRD.
+A cluster of YugaByte DB backed by Rook should be created using the `ybcluster.yugabytedb.rook.io` custom resource definition. Below is a sample custom resource spec for creating a 3-master, 3 t-servers cluster using the CRD. The sample is followed by an explanation of different configuration options available on the YugaByte DB CRD.
 
 ## Sample
 
 ```yaml
 apiVersion: yugabytedb.rook.io/v1alpha1
-kind: YugabyteDBCluster
+kind: YBCluster
 metadata:
   name: rook-yugabytedb
   namespace: rook-yugabytedb
