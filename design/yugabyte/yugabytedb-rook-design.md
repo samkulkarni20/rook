@@ -21,7 +21,7 @@ spec:
       ports:
         - name: yb-master-ui
           port: 7000          # default value
-        - name: yb-master-grpc
+        - name: yb-master-rpc
           port: 7100          # default value
     # Volume claim template for Master
     volumeClaimTemplate:
@@ -42,7 +42,7 @@ spec:
       ports:
         - name: yb-tserver-ui
           port: 9000
-        - name: yb-tserver-grpc
+        - name: yb-tserver-rpc
           port: 9100          # default value
         - name: ycql
           port: 9042          # default value
@@ -80,8 +80,8 @@ The acceptable port names & their default values are as follows:
 | Name | Default Value |
 | ---- | ------------- |
 | yb-master-ui | 7000 |
-| yb-master-grpc | 7100 |
-| yb-tserver-grpc | 9100 |
+| yb-master-rpc | 7100 |
+| yb-tserver-rpc | 9100 |
 | ycql | 9042 |
 | yedis | 6379 |
 | ysql | 5433 |
